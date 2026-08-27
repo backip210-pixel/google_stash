@@ -80,6 +80,7 @@ export default function App() {
     if (!authState.isAuthenticated) return;
     setLoading(true);
     try {
+      console.log('[App] Loading media items, album:', selectedAlbum, 'append:', append);
       let result;
       if (selectedAlbum) {
         result = await photosApi.searchMediaItems(selectedAlbum, append ? nextPageToken || undefined : undefined);
@@ -87,10 +88,15 @@ export default function App() {
         result = await photosApi.listMediaItems(50, append ? nextPageToken || undefined : undefined);
       }
       const items = result.mediaItems || [];
+      console.log('[App] Received', items.length, 'media items');
       setMediaItems(prev => append ? [...prev, ...items] : items);
       setNextPageToken(result.nextPageToken || null);
-    } catch (err) {
-      console.error('Failed to load media items:', err);
+      if (items.length === 0) {
+        console.warn('[App] No media items returned. Check API permissions.');
+      }
+    } catch (err: any) {
+      console.error('[App] Failed to load media items:', err.message || err);
+      console.error('[App] Error details:', err);
     } finally {
       setLoading(false);
     }

@@ -14,8 +14,12 @@ export class PhotosApiClient {
   }
 
   private async fetchWithAuth(endpoint: string, options: RequestInit = {}): Promise<Response> {
-    if (!this.accessToken) throw new Error('Not authenticated');
+    if (!this.accessToken) {
+      console.error('[PhotosAPI] No access token! Auth state:', this.accessToken);
+      throw new Error('Not authenticated - no access token');
+    }
 
+    console.log('[PhotosAPI] Fetching:', `${PHOTOS_API_BASE}${endpoint}`, 'Token length:', this.accessToken.length);
     const response = await fetch(`${PHOTOS_API_BASE}${endpoint}`, {
       ...options,
       headers: {
@@ -25,8 +29,10 @@ export class PhotosApiClient {
       },
     });
 
+    console.log('[PhotosAPI] Response status:', response.status);
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: { message: response.statusText } }));
+      console.error('[PhotosAPI] API Error:', error);
       throw new Error(error.error?.message || `API error: ${response.status}`);
     }
 
@@ -42,11 +48,14 @@ export class PhotosApiClient {
     const body: Record<string, unknown> = { pageSize };
     if (pageToken) body.pageToken = pageToken;
 
+    console.log('[PhotosAPI] Calling mediaItems:search with body:', body);
     const response = await this.fetchWithAuth('/mediaItems:search', {
       method: 'POST',
       body: JSON.stringify(body),
     });
-    return response.json();
+    const data = await response.json();
+    console.log('[PhotosAPI] Response:', { count: data.mediaItems?.length || 0, nextPageToken: !!data.nextPageToken });
+    return data;
   }
 
   /**

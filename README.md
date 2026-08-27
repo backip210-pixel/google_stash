@@ -73,19 +73,40 @@ Think of it as the organization power of [Stash](https://github.com/stashapp/sta
 
 ## Setup
 
-### Prerequisites
+### Step 1: Google Cloud Console Setup
 
 You need a **Google Cloud OAuth 2.0 Client ID** to connect to Google Photos:
 
-1. Go to [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials)
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
 2. **Create a new project** (or select an existing one)
 3. Enable the [**Photos Library API**](https://console.cloud.google.com/apis/library/photoslibrary.googleapis.com)
-4. Configure the **OAuth consent screen** (External / Test mode works for personal use)
-5. Create credentials → **OAuth 2.0 Client ID** → Web application
-6. Under **Authorized JavaScript origins**, add your app's URL:
-   - Local dev: `http://localhost:5173`
-   - Production: your deployed URL
-7. Copy the **Client ID**
+4. Configure the **OAuth consent screen**:
+   - Go to **APIs & Services → OAuth consent screen**
+   - Choose **External** user type
+   - Fill in app name and support email
+   - Skip scopes for now (we'll add them later)
+   - Add your email as a **Test user** under the **Audience** tab
+5. Create credentials:
+   - Go to **APIs & Services → Credentials**
+   - Click **Create Credentials → OAuth 2.0 Client ID**
+   - Application type: **Web application**
+   - Name: "Stash Photos"
+   - Under **Authorized JavaScript origins**, add:
+     - `http://localhost:5173` (for local dev)
+     - `https://localhost` (for Android APK)
+   - Under **Authorized redirect URIs**, add:
+     - `https://backip210-pixel.github.io/google_stash/oauth-redirect.html` (for Android APK)
+   - Click **Create** and copy the **Client ID**
+
+### Step 2: Enable GitHub Pages (for Android APK)
+
+The Android APK uses a hosted redirect page for OAuth. You need to enable GitHub Pages:
+
+1. Go to [Repo Settings → Pages](https://github.com/backip210-pixel/google_stash/settings/pages)
+2. Under **Source**, select **Deploy from a branch**
+3. Branch: **main**, Folder: **/ (root)**
+4. Click **Save**
+5. Wait ~1 minute for it to deploy
 
 ### Web App (PWA)
 
@@ -103,17 +124,23 @@ npm run dev
 # Open http://localhost:5173
 ```
 
-### First Launch
-1. Open the app → Click **Configure Client ID**
-2. Paste your OAuth 2.0 Client ID
-3. Click **Sign in with Google**
-4. Grant Photos Library access
-5. Start tagging! 🎉
+### First Launch (Web or Android)
+1. Open the app
+2. Click **Configure Client ID →**
+3. Paste your OAuth 2.0 Client ID
+4. Click **← Back to Login**
+5. Click **Sign in with Google**
+6. Sign in with your Google account
+7. Grant Photos Library access
+8. Your photos will load! Start tagging!
 
 ## Install APK
 
 ### Option A: Download Pre-built APK
-Download the latest `StashPhotos-v1.0-debug.apk` from the [GitHub Releases](../../releases) page or the repo root.
+1. Go to [GitHub Actions](https://github.com/backip210-pixel/google_stash/actions)
+2. Click the latest successful build
+3. Scroll to **Artifacts** → click **StashPhotos-APK**
+4. Unzip the downloaded file to get `app-debug.apk`
 
 ### Option B: Build Locally
 ```bash
@@ -126,10 +153,39 @@ cd android && ./gradlew assembleDebug
 ```
 
 ### Installing on Android
-1. Transfer the APK to your phone
-2. Enable **Install from Unknown Sources** (Settings → Security)
-3. Tap the APK to install
-4. Open the app and configure your Google Cloud Client ID
+1. Transfer the APK to your phone (email, Google Drive, USB, etc.)
+2. Enable **Install from Unknown Sources**:
+   - Android 8+: Settings → Apps → Special app access → Install unknown apps → [Your browser/file manager] → Allow
+   - Android 7 and below: Settings → Security → Unknown sources → Enable
+3. Tap the APK file to install
+4. Open the app
+5. Configure your Google Cloud Client ID (see Step 1 above)
+6. Sign in with Google
+
+### Troubleshooting
+
+**"Google Auth not initialized" error:**
+- Make sure you've entered a valid Client ID in Settings
+- The Client ID should look like: `123456789-abc123.apps.googleusercontent.com`
+
+**"redirect_uri_mismatch" error:**
+- Go to Google Cloud Console → Credentials → your OAuth Client ID
+- Under **Authorized redirect URIs**, add: `https://backip210-pixel.github.io/google_stash/oauth-redirect.html`
+- Also add `https://localhost` under **Authorized JavaScript origins**
+
+**"access_denied" or "app not verified" error:**
+- Go to Google Cloud Console → OAuth consent screen → Audience tab
+- Add your Google email (e.g., `yourname@gmail.com`) as a **Test user**
+- Save and try again
+
+**No photos showing up:**
+- Check the browser console (Chrome DevTools) for API errors
+- Make sure the Photos Library API is enabled in Google Cloud Console
+- Try signing out and back in
+
+**Status bar overlapping buttons:**
+- This is fixed in the latest version with proper safe area padding
+- If you still see it, try uninstalling and reinstalling the APK
 
 ## Development
 
@@ -219,7 +275,6 @@ npx cap open android # Open in Android Studio
 ## Known Limitations
 
 - **Read-only**: The Google Photos API doesn't allow writing tags/labels back to photos
-- **Library API scope**: The `mediaItems.list` endpoint may only return items created by your app depending on API version. If your library appears empty, the Picker API integration (planned) will solve this
 - **Local-only data**: Tags/ratings/notes live in your browser's IndexedDB — clearing browser data deletes them (use Export Data as backup)
 - **OAuth scope**: Uses `photoslibrary.readonly` — cannot upload or modify photos
 

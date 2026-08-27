@@ -45,7 +45,6 @@ export function Header({
       style={{
         background: 'var(--color-bg-secondary)',
         borderBottom: '1px solid var(--color-border)',
-        paddingTop: 'var(--safe-top)',
       }}
     >
       {/* Top bar */}
