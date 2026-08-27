@@ -30,5 +30,4 @@ Thumbs.db
 # TypeScript build info
 *.tsbuildinfo
 
-# Gradle wrapper jar (binary, too large for GitHub)
-android/gradle/wrapper/gradle-wrapper.jar
+
