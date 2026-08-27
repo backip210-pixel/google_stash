@@ -13,6 +13,41 @@ export function Settings({ googleClientId, onClientIdChange }: SettingsProps) {
   const [tpdbKeyInput, setTpdbKeyInput] = useState(tpdbApi.getApiKey() || '');
   const [saved, setSaved] = useState(false);
   const [tpdbSaved, setTpdbSaved] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string; details?: any } | null>(null);
+
+  async function handleTestApi() {
+    setTestResult({ success: false, message: 'Testing...' });
+    try {
+      const { photosApi } = await import('../api/photosApi');
+      const { getAuthState } = await import('../auth/googleAuth');
+      const authState = getAuthState();
+      
+      if (!authState.accessToken) {
+        setTestResult({ 
+          success: false, 
+          message: 'Not signed in. Please sign in with Google first.' 
+        });
+        return;
+      }
+
+      console.log('[Test API] Starting API test...');
+      const result = await photosApi.listMediaItems(5);
+      
+      console.log('[Test API] Result:', result);
+      setTestResult({
+        success: true,
+        message: `Success! Found ${result.mediaItems?.length || 0} items.`,
+        details: result
+      });
+    } catch (err: any) {
+      console.error('[Test API] Error:', err);
+      setTestResult({
+        success: false,
+        message: `Error: ${err.message}`,
+        details: err
+      });
+    }
+  }
 
   function handleSave() {
     onClientIdChange(clientIdInput.trim());
@@ -179,6 +214,40 @@ export function Settings({ googleClientId, onClientIdChange }: SettingsProps) {
           </p>
         </div>
       </div>
+
+      {/* API Test Button */}
+      {googleClientId && (
+        <div className="rounded-xl p-5" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
+          <h3 className="text-sm font-medium mb-4 flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+            🔍 API Connection Test
+          </h3>
+          <button
+            onClick={handleTestApi}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-white cursor-pointer"
+            style={{ background: 'var(--color-accent)' }}
+          >
+            Test Google Photos API
+          </button>
+          {testResult && (
+            <div className="mt-3 p-3 rounded-lg text-xs" style={{ 
+              background: testResult.success ? 'rgba(63, 185, 80, 0.1)' : 'rgba(248, 81, 73, 0.1)',
+              border: `1px solid ${testResult.success ? 'var(--color-success)' : 'var(--color-danger)'}`
+            }}>
+              <p style={{ color: testResult.success ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                {testResult.message}
+              </p>
+              {testResult.details && (
+                <pre className="mt-2 p-2 rounded overflow-x-auto" style={{ background: 'var(--color-bg-tertiary)', fontSize: '10px' }}>
+                  {JSON.stringify(testResult.details, null, 2)}
+                </pre>
+              )}
+            </div>
+          )}
+          <p className="text-xs mt-2" style={{ color: 'var(--color-text-secondary)' }}>
+            If this fails, check the browser console (F12) for detailed error logs.
+          </p>
+        </div>
+      )}
 
       {/* Google Sign-In Redirect URI */}
       {googleClientId && (

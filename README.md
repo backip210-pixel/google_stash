@@ -187,6 +187,42 @@ cd android && ./gradlew assembleDebug
 - This is fixed in the latest version with proper safe area padding
 - If you still see it, try uninstalling and reinstalling the APK
 
+**Debugging with ADB logcat:**
+If photos still don't load, you can check the Android logs:
+
+1. **Enable USB Debugging** on your phone:
+   - Settings → About phone → Tap "Build number" 7 times
+   - Settings → Developer options → Enable "USB debugging"
+
+2. **Install ADB** on your computer:
+   - Windows: Download from https://developer.android.com/tools/adb
+   - Mac: `brew install android-platform-tools`
+   - Linux: `sudo apt install adb`
+
+3. **Connect phone and view logs:**
+   ```bash
+   # Connect phone via USB
+   adb devices  # Should show your device
+   
+   # View app logs (filter for Stash Photos)
+   adb logcat | grep -i "stash\|photos\|auth\|api"
+   
+   # Or view all logs in real-time
+   adb logcat
+   ```
+
+4. **Look for these log patterns:**
+   - `[App]` - App initialization and media loading
+   - `[PhotosAPI]` - API calls and responses
+   - `[Main]` - StatusBar configuration
+   - `ERROR` or `Failed` - Error messages
+
+5. **Common errors to look for:**
+   - `No access token` - Auth didn't complete properly
+   - `403 Forbidden` - API permissions issue
+   - `404 Not Found` - Wrong API endpoint
+   - `CORS` - Browser security issue (web version only)
+
 ## Development
 
 ### Tech Stack

@@ -15,12 +15,19 @@ export class PhotosApiClient {
 
   private async fetchWithAuth(endpoint: string, options: RequestInit = {}): Promise<Response> {
     if (!this.accessToken) {
-      console.error('[PhotosAPI] No access token! Auth state:', this.accessToken);
-      throw new Error('Not authenticated - no access token');
+      console.error('[PhotosAPI] ═══ NO ACCESS TOKEN ═══');
+      console.error('[PhotosAPI] This means auth completed but token was not saved');
+      throw new Error('Not authenticated - no access token available');
     }
 
-    console.log('[PhotosAPI] Fetching:', `${PHOTOS_API_BASE}${endpoint}`, 'Token length:', this.accessToken.length);
-    const response = await fetch(`${PHOTOS_API_BASE}${endpoint}`, {
+    console.log('[PhotosAPI] Making request:', endpoint);
+    console.log('[PhotosAPI] Method:', options.method || 'GET');
+    console.log('[PhotosAPI] Token preview:', this.accessToken.substring(0, 20) + '...');
+    
+    const url = `${PHOTOS_API_BASE}${endpoint}`;
+    console.log('[PhotosAPI] Full URL:', url);
+    
+    const response = await fetch(url, {
       ...options,
       headers: {
         'Authorization': `Bearer ${this.accessToken}`,
@@ -29,13 +36,26 @@ export class PhotosApiClient {
       },
     });
 
-    console.log('[PhotosAPI] Response status:', response.status);
+    console.log('[PhotosAPI] Response status:', response.status, response.statusText);
+    
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: { message: response.statusText } }));
-      console.error('[PhotosAPI] API Error:', error);
+      const errorText = await response.text();
+      console.error('[PhotosAPI] ═══ API ERROR RESPONSE ═══');
+      console.error('[PhotosAPI] Status:', response.status);
+      console.error('[PhotosAPI] Response body:', errorText);
+      console.error('[PhotosAPI] ═════════════════════════');
+      
+      let error;
+      try {
+        error = JSON.parse(errorText);
+      } catch {
+        error = { error: { message: response.statusText } };
+      }
+      
       throw new Error(error.error?.message || `API error: ${response.status}`);
     }
 
+    console.log('[PhotosAPI] Response OK');
     return response;
   }
 

@@ -77,30 +77,56 @@ export default function App() {
 
   // Load media items
   const loadMediaItems = useCallback(async (append: boolean = false) => {
-    if (!authState.isAuthenticated) return;
+    if (!authState.isAuthenticated) {
+      console.log('[App] Not authenticated, skipping media load');
+      return;
+    }
+    
+    console.log('[App] === Starting media load ===');
+    console.log('[App] Auth state:', { 
+      hasToken: !!authState.accessToken, 
+      tokenLength: authState.accessToken?.length || 0 
+    });
+    console.log('[App] Loading album:', selectedAlbum, 'append:', append);
+    
     setLoading(true);
     try {
-      console.log('[App] Loading media items, album:', selectedAlbum, 'append:', append);
       let result;
       if (selectedAlbum) {
+        console.log('[App] Searching within album:', selectedAlbum);
         result = await photosApi.searchMediaItems(selectedAlbum, append ? nextPageToken || undefined : undefined);
       } else {
+        console.log('[App] Listing all media items');
         result = await photosApi.listMediaItems(50, append ? nextPageToken || undefined : undefined);
       }
+      
       const items = result.mediaItems || [];
-      console.log('[App] Received', items.length, 'media items');
+      console.log('[App] === Media load complete ===');
+      console.log('[App] Received', items.length, 'items');
+      console.log('[App] First item (if any):', items[0] ? JSON.stringify(items[0]).substring(0, 200) : 'none');
+      console.log('[App] Next page token:', result.nextPageToken ? 'present' : 'none');
+      
       setMediaItems(prev => append ? [...prev, ...items] : items);
       setNextPageToken(result.nextPageToken || null);
-      if (items.length === 0) {
-        console.warn('[App] No media items returned. Check API permissions.');
+      
+      if (items.length === 0 && !append) {
+        console.warn('[App] ⚠️ No media items returned! Possible causes:');
+        console.warn('[App]   1. API scope issue - check Google Cloud Console');
+        console.warn('[App]   2. Empty library');
+        console.warn('[App]   3. API rate limit');
       }
     } catch (err: any) {
-      console.error('[App] Failed to load media items:', err.message || err);
-      console.error('[App] Error details:', err);
+      console.error('[App] ═══ API ERROR ═══');
+      console.error('[App] Error type:', err.constructor.name);
+      console.error('[App] Error message:', err.message);
+      console.error('[App] Error details:', JSON.stringify(err, null, 2));
+      console.error('[App] Stack trace:', err.stack);
+      console.error('[App] ═══════════════');
     } finally {
       setLoading(false);
+      console.log('[App] === Load finished, loading state:', false, '===');
     }
-  }, [authState.isAuthenticated, selectedAlbum, nextPageToken]);
+  }, [authState.isAuthenticated, authState.accessToken, selectedAlbum, nextPageToken]);
 
   // Load when auth changes or album changes
   useEffect(() => {
