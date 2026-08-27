@@ -85,26 +85,18 @@ function setupDeepLinkListener() {
       }
       
       if (token) {
-        // Try decoding in case it's double-encoded
-        let decodedToken = token;
-        try {
-          decodedToken = decodeURIComponent(token);
-          console.log('[Auth] Token decoded successfully');
-        } catch (e) {
-          console.log('[Auth] Token decode failed, using original');
-        }
-        
-        console.log('[Auth] Token captured, length:', decodedToken.length);
-        console.log('[Auth] Token preview:', decodedToken.substring(0, 50) + '...');
+        // URLSearchParams.get() already decodes the token, so use it as-is
+        console.log('[Auth] Token captured, length:', token.length);
+        console.log('[Auth] Token preview:', token.substring(0, 50) + '...');
         console.log('[Auth] Captured at:', new Date().toISOString());
         
-        deepLinkToken = decodedToken;
+        deepLinkToken = token;
         updateAuthState({
-          accessToken: decodedToken,
+          accessToken: token,
           isAuthenticated: true,
           error: null,
         });
-        fetchUserInfo(decodedToken);
+        fetchUserInfo(token);
       } else {
         console.error('[Auth] No access_token in deep link');
         updateAuthState({ error: 'No token received from Google' });
