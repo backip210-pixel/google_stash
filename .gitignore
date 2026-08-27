@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Android build
+android/app/build/
+android/.gradle/
+android/build/
+android/capacitor-android/build/
+android/capacitor-cordova-android-plugins/build/
+
+# APKs
+*.apk
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Gradle wrapper jar (binary, too large for GitHub)
+android/gradle/wrapper/gradle-wrapper.jar
