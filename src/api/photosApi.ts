@@ -60,9 +60,10 @@ export class PhotosApiClient {
   }
 
   /**
-   * Validate the token by calling userinfo endpoint
+   * Validate the token by calling tokeninfo endpoint
+   * This gives us more details than the userinfo endpoint
    */
-  async validateToken(): Promise<{ email?: string; scope?: string }> {
+  async validateToken(): Promise<{ email?: string; scope?: string; expires_in?: number }> {
     if (!this.accessToken) {
       throw new Error('No access token - please sign in again');
     }
@@ -70,13 +71,32 @@ export class PhotosApiClient {
     console.log('[PhotosAPI] Validating token, length:', this.accessToken.length);
     console.log('[PhotosAPI] Token preview:', this.accessToken.substring(0, 30) + '...');
     
+    // Try tokeninfo endpoint first (gives more details)
+    try {
+      const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${this.accessToken}`);
+      console.log('[PhotosAPI] Tokeninfo response:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('[PhotosAPI] Token info:', data);
+        return {
+          email: data.email,
+          scope: data.scope,
+          expires_in: data.expires_in
+        };
+      }
+    } catch (err) {
+      console.log('[PhotosAPI] Tokeninfo failed, trying userinfo...');
+    }
+
+    // Fallback to userinfo endpoint
     const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: {
         'Authorization': `Bearer ${this.accessToken}`,
       },
     });
 
-    console.log('[PhotosAPI] Token validation response:', response.status);
+    console.log('[PhotosAPI] Userinfo response:', response.status);
 
     if (response.status === 401) {
       throw new Error('Token expired or invalid - please sign in again');
@@ -88,7 +108,7 @@ export class PhotosApiClient {
 
     const data = await response.json();
     console.log('[PhotosAPI] Token valid for:', data.email);
-    return data;
+    return { email: data.email };
   }
 
   /**
