@@ -1,7 +1,7 @@
 import { App } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
 
-const SCOPES = 'https://www.googleapis.com/auth/photoslibrary.readonly';
+const SCOPES = 'https://www.googleapis.com/auth/photoslibrary';
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const REDIRECT_URI = 'https://backip210-pixel.github.io/google_stash/oauth-redirect.html';
 
