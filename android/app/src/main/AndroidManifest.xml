@@ -22,7 +22,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Deep link for OAuth redirect: stashphotos://auth?access_token=XXX -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -47,3 +46,4 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 </manifest>
+

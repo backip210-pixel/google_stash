@@ -33,14 +33,25 @@ export class PhotosApiClient {
     return response;
   }
 
+  /**
+   * List ALL media items from the user's library using search endpoint.
+   * The GET /mediaItems endpoint only returns app-created items,
+   * but POST /mediaItems:search returns the full library.
+   */
   async listMediaItems(pageSize: number = 50, pageToken?: string): Promise<GPListResponse<GPMediaItem>> {
-    const params = new URLSearchParams({ pageSize: String(pageSize) });
-    if (pageToken) params.set('pageToken', pageToken);
+    const body: Record<string, unknown> = { pageSize };
+    if (pageToken) body.pageToken = pageToken;
 
-    const response = await this.fetchWithAuth(`/mediaItems?${params}`);
+    const response = await this.fetchWithAuth('/mediaItems:search', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
     return response.json();
   }
 
+  /**
+   * Search media items within a specific album
+   */
   async searchMediaItems(albumId?: string, pageToken?: string, pageSize: number = 50): Promise<GPListResponse<GPMediaItem>> {
     const body: Record<string, unknown> = { pageSize };
     if (albumId) body.albumId = albumId;
@@ -66,17 +77,14 @@ export class PhotosApiClient {
     return response.json();
   }
 
-  // Get thumbnail URL with specific dimensions
   getThumbnailUrl(baseUrl: string, width: number = 256, height: number = 256): string {
     return `${baseUrl}=w${width}-h${height}-c`;
   }
 
-  // Get full-size image URL
   getFullSizeUrl(baseUrl: string): string {
     return `${baseUrl}=d`;
   }
 
-  // Get video thumbnail
   getVideoThumbnailUrl(baseUrl: string, width: number = 256, height: number = 256): string {
     return `${baseUrl}=w${width}-h${height}-c`;
   }

@@ -41,7 +41,13 @@ export function Header({
   ];
 
   return (
-    <header style={{ background: 'var(--color-bg-secondary)', borderBottom: '1px solid var(--color-border)' }}>
+    <header
+      style={{
+        background: 'var(--color-bg-secondary)',
+        borderBottom: '1px solid var(--color-border)',
+        paddingTop: 'var(--safe-top)',
+      }}
+    >
       {/* Top bar */}
       <div className="flex items-center gap-3 px-4 py-3">
         {/* Logo */}

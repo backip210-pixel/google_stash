@@ -1,9 +1,8 @@
 import { App } from '@capacitor/app';
+import { StatusBar, Style } from '@capacitor/status-bar';
 
 const SCOPES = 'https://www.googleapis.com/auth/photoslibrary.readonly';
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
-
-// GitHub Pages redirect page URL (configured in Google Cloud Console redirect URIs)
 const REDIRECT_URI = 'https://backip210-pixel.github.io/google_stash/oauth-redirect.html';
 
 export interface AuthState {
@@ -18,6 +17,7 @@ export interface AuthState {
 let authStateCallback: ((state: AuthState) => void) | null = null;
 let deepLinkToken: string | null = null;
 let deepLinkSetup = false;
+let statusBarConfigured = false;
 
 let currentAuthState: AuthState = {
   isAuthenticated: false,
@@ -37,6 +37,23 @@ function isNativePlatform(): boolean {
   }
 }
 
+/**
+ * Configure native status bar — dark text on light background or transparent
+ */
+async function configureStatusBar() {
+  if (statusBarConfigured || !isNativePlatform()) return;
+  statusBarConfigured = true;
+  try {
+    // Make status bar transparent so our dark theme shows through
+    await StatusBar.setBackgroundColor({ color: '#0d1117' });
+    await StatusBar.setStyle({ style: Style.Dark });
+    // Show the status bar
+    await StatusBar.show();
+  } catch (err) {
+    console.warn('StatusBar config failed:', err);
+  }
+}
+
 function updateAuthState(updates: Partial<AuthState>) {
   currentAuthState = { ...currentAuthState, ...updates };
   if (authStateCallback) {
@@ -44,17 +61,12 @@ function updateAuthState(updates: Partial<AuthState>) {
   }
 }
 
-/**
- * Set up deep link listener for native app
- * Listens for stashphotos://auth?access_token=XXX
- */
 function setupDeepLinkListener() {
   if (deepLinkSetup) return;
   deepLinkSetup = true;
 
   App.addListener('appUrlOpen', (data: { url: string }) => {
     const url = data.url;
-    // Parse stashphotos://auth?access_token=XXX
     if (url.startsWith('stashphotos://auth')) {
       const params = new URLSearchParams(url.split('?')[1] || '');
       const token = params.get('access_token');
@@ -89,16 +101,16 @@ async function fetchUserInfo(token: string) {
 
 export function onAuthStateChange(callback: (state: AuthState) => void) {
   authStateCallback = callback;
-  // Check for deep link token
   if (deepLinkToken) {
     currentAuthState.accessToken = deepLinkToken;
     currentAuthState.isAuthenticated = true;
   }
+  // Configure status bar on first callback
+  configureStatusBar();
   callback(currentAuthState);
 }
 
 export function getAuthState(): AuthState {
-  // Check for token in URL hash (web redirect fallback)
   const hash = window.location.hash;
   if (hash && hash.length > 1) {
     const params = new URLSearchParams(hash.substring(1));
@@ -111,17 +123,18 @@ export function getAuthState(): AuthState {
       fetchUserInfo(token);
     }
   }
+  configureStatusBar();
   return currentAuthState;
 }
 
 export async function initGoogleAuth(clientId: string): Promise<void> {
   const native = isNativePlatform();
   updateAuthState({ isNative: native, error: null });
+  configureStatusBar();
 
   if (native) {
     setupDeepLinkListener();
   } else {
-    // Web: preload GIS library
     try {
       await loadGISScript();
     } catch {
@@ -156,9 +169,6 @@ export function getRequiredOrigin(): string {
   return window.location.origin;
 }
 
-/**
- * Request login — uses appropriate method for platform
- */
 export function requestLogin() {
   const clientId = localStorage.getItem('gp_client_id');
   if (!clientId) {
@@ -167,19 +177,14 @@ export function requestLogin() {
   }
 
   const native = isNativePlatform();
-
   if (native) {
-    // NATIVE: Open OAuth in Chrome Custom Tab, redirect goes through GitHub Pages page
     loginNative(clientId);
   } else {
-    // WEB: Try GIS popup first, fall back to redirect
     loginWeb(clientId);
   }
 }
 
 function loginNative(clientId: string) {
-  // Open Google OAuth in Capacitor Browser (Chrome Custom Tab)
-  // The redirect_uri points to our GitHub Pages page which passes the token back via deep link
   const authUrl = `${GOOGLE_AUTH_URL}?` + new URLSearchParams({
     client_id: clientId,
     redirect_uri: REDIRECT_URI,
@@ -189,18 +194,14 @@ function loginNative(clientId: string) {
     prompt: 'consent',
   }).toString();
 
-  // Open in Chrome Custom Tab via Capacitor Browser
   import('@capacitor/browser').then(({ Browser }) => {
     Browser.open({
       url: authUrl,
       presentationStyle: 'fullscreen',
-    }).then(() => {
-      // Browser opened — the deep link listener will handle the token
     }).catch(err => {
       updateAuthState({ error: `Failed to open sign-in: ${err.message}` });
     });
   }).catch(() => {
-    // Browser plugin not available, fall back to full-page redirect
     window.location.href = authUrl;
   });
 }
@@ -214,7 +215,6 @@ function loginWeb(clientId: string) {
         scope: SCOPES,
         callback: (response: any) => {
           if (response.error) {
-            // Fallback to redirect
             doWebRedirect(clientId);
             return;
           }
@@ -236,10 +236,9 @@ function loginWeb(clientId: string) {
 }
 
 function doWebRedirect(clientId: string) {
-  const redirectUri = window.location.origin;
   const authUrl = `${GOOGLE_AUTH_URL}?` + new URLSearchParams({
     client_id: clientId,
-    redirect_uri: redirectUri,
+    redirect_uri: window.location.origin,
     response_type: 'token',
     scope: SCOPES,
     access_type: 'online',
@@ -254,7 +253,6 @@ export function logout() {
       fetch(`https://accounts.google.com/o/oauth2/revoke?token=${currentAuthState.accessToken}`)
         .catch(() => {});
     } catch {}
-
     const google = (window as any).google;
     if (google?.accounts?.oauth2) {
       try {
@@ -262,7 +260,6 @@ export function logout() {
       } catch {}
     }
   }
-
   updateAuthState({
     isAuthenticated: false,
     accessToken: null,
