@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Save, ExternalLink, Info, Shield, Database } from 'lucide-react';
-
 import { tpdbApi } from '../api/tpdbApi';
+import { getRequiredOrigin } from '../auth/googleAuth';
 
 interface SettingsProps {
   googleClientId: string;
@@ -105,9 +105,15 @@ export function Settings({ googleClientId, onClientIdChange }: SettingsProps) {
             <li>Configure the OAuth consent screen (External / Test mode is fine)</li>
             <li>Create credentials → OAuth 2.0 Client ID → Web application</li>
             <li>
-              Add authorized JavaScript origins:
+              Add <strong>ALL</strong> of these as authorized JavaScript origins:
               <code className="block mt-1 px-2 py-1 rounded text-xs" style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-accent)' }}>
-                {window.location.origin}
+                {getRequiredOrigin()}
+              </code>
+              <code className="block mt-1 px-2 py-1 rounded text-xs" style={{ background: 'var(--color-bg-secondary)', color: '#bc8cff' }}>
+                https://localhost
+              </code>
+              <code className="block mt-1 px-2 py-1 rounded text-xs" style={{ background: 'var(--color-bg-secondary)', color: '#56d364' }}>
+                http://localhost
               </code>
             </li>
             <li>Copy the Client ID and paste it above</li>
