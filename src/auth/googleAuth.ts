@@ -67,10 +67,14 @@ function setupDeepLinkListener() {
 
   App.addListener('appUrlOpen', (data: { url: string }) => {
     const url = data.url;
-    console.log('[Auth] Deep link received:', url.substring(0, 100));
+    console.log('[Auth] Deep link received, full length:', url.length);
+    console.log('[Auth] Deep link preview:', url.substring(0, 150));
     
     if (url.startsWith('stashphotos://auth')) {
-      const params = new URLSearchParams(url.split('?')[1] || '');
+      const queryString = url.split('?')[1] || '';
+      console.log('[Auth] Query string:', queryString.substring(0, 100));
+      
+      const params = new URLSearchParams(queryString);
       const token = params.get('access_token');
       const error = params.get('error');
       
@@ -81,17 +85,26 @@ function setupDeepLinkListener() {
       }
       
       if (token) {
-        console.log('[Auth] Token captured, length:', token.length);
-        console.log('[Auth] Token preview:', token.substring(0, 30) + '...');
+        // Try decoding in case it's double-encoded
+        let decodedToken = token;
+        try {
+          decodedToken = decodeURIComponent(token);
+          console.log('[Auth] Token decoded successfully');
+        } catch (e) {
+          console.log('[Auth] Token decode failed, using original');
+        }
+        
+        console.log('[Auth] Token captured, length:', decodedToken.length);
+        console.log('[Auth] Token preview:', decodedToken.substring(0, 50) + '...');
         console.log('[Auth] Captured at:', new Date().toISOString());
         
-        deepLinkToken = token;
+        deepLinkToken = decodedToken;
         updateAuthState({
-          accessToken: token,
+          accessToken: decodedToken,
           isAuthenticated: true,
           error: null,
         });
-        fetchUserInfo(token);
+        fetchUserInfo(decodedToken);
       } else {
         console.error('[Auth] No access_token in deep link');
         updateAuthState({ error: 'No token received from Google' });
