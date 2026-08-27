@@ -180,6 +180,39 @@ export function Settings({ googleClientId, onClientIdChange }: SettingsProps) {
         </div>
       </div>
 
+      {/* Google Sign-In Redirect URI */}
+      {googleClientId && (
+        <div className="rounded-xl p-5" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
+          <h3 className="text-sm font-medium mb-4 flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+            <ExternalLink size={16} />
+            Android APK — Sign-In Setup
+          </h3>
+          <p className="text-xs mb-3" style={{ color: 'var(--color-text-secondary)' }}>
+            The APK uses a hosted redirect page to pass the auth token back to the app.
+            You need to do <strong>2 things</strong> in Google Cloud Console:
+          </p>
+          <p className="text-xs font-medium mb-2" style={{ color: 'var(--color-text-primary)' }}>
+            1. Add this as an <strong>Authorized redirect URI</strong>:
+          </p>
+          <code className="block p-3 rounded-lg text-xs mb-4 break-all" style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-accent)', border: '1px solid var(--color-border)' }}>
+            https://backip210-pixel.github.io/google_stash/oauth-redirect.html
+          </code>
+          <p className="text-xs font-medium mb-2" style={{ color: 'var(--color-text-primary)' }}>
+            2. Enable GitHub Pages on this repo (so the redirect page is live):
+          </p>
+          <ol className="text-xs space-y-1 list-decimal list-inside mb-3" style={{ color: 'var(--color-text-secondary)' }}>
+            <li>Go to <a href="https://github.com/backip210-pixel/google_stash/settings/pages" target="_blank" className="underline" style={{ color: 'var(--color-accent)' }}>Settings → Pages</a></li>
+            <li>Source: <strong>Deploy from a branch</strong></li>
+            <li>Branch: <strong>main</strong> / Folder: <strong>/ (root)</strong></li>
+            <li>Click <strong>Save</strong></li>
+          </ol>
+          <p className="text-xs p-2 rounded" style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-secondary)' }}>
+            Once enabled, your redirect page will be live at the URL above.
+            Also add your user email as a <strong>test user</strong> under the Audience tab.
+          </p>
+        </div>
+      )}
+
       {/* Data Management */}
       <div className="rounded-xl p-5" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
         <h3 className="text-sm font-medium mb-3" style={{ color: 'var(--color-text-primary)' }}>

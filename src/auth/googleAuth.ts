@@ -1,5 +1,10 @@
+import { App } from '@capacitor/app';
+
 const SCOPES = 'https://www.googleapis.com/auth/photoslibrary.readonly';
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
+
+// GitHub Pages redirect page URL (configured in Google Cloud Console redirect URIs)
+const REDIRECT_URI = 'https://backip210-pixel.github.io/google_stash/oauth-redirect.html';
 
 export interface AuthState {
   isAuthenticated: boolean;
@@ -11,6 +16,9 @@ export interface AuthState {
 }
 
 let authStateCallback: ((state: AuthState) => void) | null = null;
+let deepLinkToken: string | null = null;
+let deepLinkSetup = false;
+
 let currentAuthState: AuthState = {
   isAuthenticated: false,
   accessToken: null,
@@ -20,7 +28,6 @@ let currentAuthState: AuthState = {
   isNative: false,
 };
 
-// Detect if running inside Capacitor native app
 function isNativePlatform(): boolean {
   try {
     return typeof (window as any).Capacitor !== 'undefined' &&
@@ -30,55 +37,38 @@ function isNativePlatform(): boolean {
   }
 }
 
-export function onAuthStateChange(callback: (state: AuthState) => void) {
-  authStateCallback = callback;
-  callback(currentAuthState);
-}
-
-export function getAuthState(): AuthState {
-  // Check for token in URL hash (redirect back from Google OAuth)
-  const hashToken = getTokenFromHash();
-  if (hashToken) {
-    currentAuthState.accessToken = hashToken;
-    currentAuthState.isAuthenticated = true;
-    currentAuthState.error = null;
-    // Clean up the URL
-    window.history.replaceState(null, '', window.location.pathname);
-    // Fetch user info
-    fetchUserInfo(hashToken);
-  }
-
-  // Check for error in URL hash (OAuth error redirect)
-  const hashError = getErrorFromHash();
-  if (hashError && !hashToken) {
-    currentAuthState.error = hashError;
-  }
-
-  return currentAuthState;
-}
-
-function getTokenFromHash(): string | null {
-  const hash = window.location.hash;
-  if (!hash || hash.length < 2) return null;
-  const params = new URLSearchParams(hash.substring(1));
-  return params.get('access_token');
-}
-
-function getErrorFromHash(): string | null {
-  const hash = window.location.hash;
-  if (!hash || hash.length < 2) return null;
-  const params = new URLSearchParams(hash.substring(1));
-  const error = params.get('error');
-  const desc = params.get('error_description');
-  if (error) return desc || error;
-  return null;
-}
-
 function updateAuthState(updates: Partial<AuthState>) {
   currentAuthState = { ...currentAuthState, ...updates };
   if (authStateCallback) {
     authStateCallback(currentAuthState);
   }
+}
+
+/**
+ * Set up deep link listener for native app
+ * Listens for stashphotos://auth?access_token=XXX
+ */
+function setupDeepLinkListener() {
+  if (deepLinkSetup) return;
+  deepLinkSetup = true;
+
+  App.addListener('appUrlOpen', (data: { url: string }) => {
+    const url = data.url;
+    // Parse stashphotos://auth?access_token=XXX
+    if (url.startsWith('stashphotos://auth')) {
+      const params = new URLSearchParams(url.split('?')[1] || '');
+      const token = params.get('access_token');
+      if (token) {
+        deepLinkToken = token;
+        updateAuthState({
+          accessToken: token,
+          isAuthenticated: true,
+          error: null,
+        });
+        fetchUserInfo(token);
+      }
+    }
+  });
 }
 
 async function fetchUserInfo(token: string) {
@@ -97,20 +87,45 @@ async function fetchUserInfo(token: string) {
   }
 }
 
-/**
- * Initialize auth — call this when Client ID is set or changed
- */
+export function onAuthStateChange(callback: (state: AuthState) => void) {
+  authStateCallback = callback;
+  // Check for deep link token
+  if (deepLinkToken) {
+    currentAuthState.accessToken = deepLinkToken;
+    currentAuthState.isAuthenticated = true;
+  }
+  callback(currentAuthState);
+}
+
+export function getAuthState(): AuthState {
+  // Check for token in URL hash (web redirect fallback)
+  const hash = window.location.hash;
+  if (hash && hash.length > 1) {
+    const params = new URLSearchParams(hash.substring(1));
+    const token = params.get('access_token');
+    if (token) {
+      currentAuthState.accessToken = token;
+      currentAuthState.isAuthenticated = true;
+      currentAuthState.error = null;
+      window.history.replaceState(null, '', window.location.pathname);
+      fetchUserInfo(token);
+    }
+  }
+  return currentAuthState;
+}
+
 export async function initGoogleAuth(clientId: string): Promise<void> {
   const native = isNativePlatform();
   updateAuthState({ isNative: native, error: null });
 
-  // For web: preload the Google Identity Services library for faster popup auth
-  if (!native) {
+  if (native) {
+    setupDeepLinkListener();
+  } else {
+    // Web: preload GIS library
     try {
       await loadGISScript();
-    } catch (err: any) {
-      // Not fatal — we can still use redirect flow
-      console.warn('GIS script failed to load, will use redirect flow:', err.message);
+    } catch {
+      // Not fatal
     }
   }
 }
@@ -134,10 +149,7 @@ function loadGISScript(): Promise<void> {
   });
 }
 
-/**
- * Get the redirect URI for the current platform
- */
-export function getRedirectUri(): string {
+export function getRequiredOrigin(): string {
   if (isNativePlatform()) {
     return 'https://localhost';
   }
@@ -145,14 +157,7 @@ export function getRedirectUri(): string {
 }
 
 /**
- * Get the required origin for Google Cloud Console
- */
-export function getRequiredOrigin(): string {
-  return getRedirectUri();
-}
-
-/**
- * Request login — uses full-page redirect (works in both web and Capacitor)
+ * Request login — uses appropriate method for platform
  */
 export function requestLogin() {
   const clientId = localStorage.getItem('gp_client_id');
@@ -161,43 +166,77 @@ export function requestLogin() {
     return;
   }
 
-  // First try the GIS popup flow (web only, better UX)
-  if (!isNativePlatform()) {
-    const google = (window as any).google;
-    if (google?.accounts?.oauth2) {
-      try {
-        const tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: clientId,
-          scope: SCOPES,
-          callback: (response: any) => {
-            if (response.error) {
-              // Fallback to redirect flow
-              doRedirectLogin(clientId);
-              return;
-            }
-            updateAuthState({
-              accessToken: response.access_token,
-              isAuthenticated: true,
-              error: null,
-            });
-            fetchUserInfo(response.access_token);
-          },
-        });
-        tokenClient.requestAccessToken({ prompt: 'consent' });
-        return;
-      } catch {
-        // Fall through to redirect flow
-      }
-    }
-  }
+  const native = isNativePlatform();
 
-  // Redirect flow (works everywhere, including Capacitor native)
-  doRedirectLogin(clientId);
+  if (native) {
+    // NATIVE: Open OAuth in Chrome Custom Tab, redirect goes through GitHub Pages page
+    loginNative(clientId);
+  } else {
+    // WEB: Try GIS popup first, fall back to redirect
+    loginWeb(clientId);
+  }
 }
 
-function doRedirectLogin(clientId: string) {
-  const redirectUri = getRedirectUri();
+function loginNative(clientId: string) {
+  // Open Google OAuth in Capacitor Browser (Chrome Custom Tab)
+  // The redirect_uri points to our GitHub Pages page which passes the token back via deep link
+  const authUrl = `${GOOGLE_AUTH_URL}?` + new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: REDIRECT_URI,
+    response_type: 'token',
+    scope: SCOPES,
+    access_type: 'online',
+    prompt: 'consent',
+  }).toString();
 
+  // Open in Chrome Custom Tab via Capacitor Browser
+  import('@capacitor/browser').then(({ Browser }) => {
+    Browser.open({
+      url: authUrl,
+      presentationStyle: 'fullscreen',
+    }).then(() => {
+      // Browser opened — the deep link listener will handle the token
+    }).catch(err => {
+      updateAuthState({ error: `Failed to open sign-in: ${err.message}` });
+    });
+  }).catch(() => {
+    // Browser plugin not available, fall back to full-page redirect
+    window.location.href = authUrl;
+  });
+}
+
+function loginWeb(clientId: string) {
+  const google = (window as any).google;
+  if (google?.accounts?.oauth2) {
+    try {
+      const tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: SCOPES,
+        callback: (response: any) => {
+          if (response.error) {
+            // Fallback to redirect
+            doWebRedirect(clientId);
+            return;
+          }
+          updateAuthState({
+            accessToken: response.access_token,
+            isAuthenticated: true,
+            error: null,
+          });
+          fetchUserInfo(response.access_token);
+        },
+      });
+      tokenClient.requestAccessToken({ prompt: 'consent' });
+      return;
+    } catch {
+      // Fall through
+    }
+  }
+  doWebRedirect(clientId);
+}
+
+function doWebRedirect(clientId: string) {
+  const redirectUri = window.location.origin;
   const authUrl = `${GOOGLE_AUTH_URL}?` + new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
@@ -206,13 +245,10 @@ function doRedirectLogin(clientId: string) {
     access_type: 'online',
     prompt: 'consent',
   }).toString();
-
-  // Full-page redirect to Google OAuth
   window.location.href = authUrl;
 }
 
 export function logout() {
-  // Revoke token
   if (currentAuthState.accessToken) {
     try {
       fetch(`https://accounts.google.com/o/oauth2/revoke?token=${currentAuthState.accessToken}`)
@@ -234,7 +270,4 @@ export function logout() {
     userPhoto: null,
     error: null,
   });
-
-  // Also clear any stored state
-  localStorage.removeItem('auth_state');
 }

@@ -11,6 +11,24 @@ const config: CapacitorConfig = {
     allowMixedContent: false,
     captureInput: true,
     webContentsDebuggingEnabled: false,
+    intentFilters: [
+      {
+        action: 'VIEW',
+        autoVerify: false,
+        data: [
+          {
+            scheme: 'stashphotos',
+            host: 'auth',
+          },
+        ],
+        category: ['BROWSABLE', 'DEFAULT'],
+      },
+    ],
+  },
+  plugins: {
+    CapacitorBrowser: {
+      // Allow the browser to handle the OAuth redirect
+    },
   },
 };
 
