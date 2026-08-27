@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { GPMediaItem, Tag } from '../types';
+import type { GPMediaItem, Tag, PhotoMetadata } from '../types';
 import { photosApi } from '../api/photosApi';
 import {
   getAllTags,
@@ -14,7 +14,6 @@ import {
   setPhotoRating,
   setPhotoNotes,
   getPhotoMetadata,
-  type PhotoMetadata,
 } from '../db/database';
 import { X, Star, Tag as TagIcon, Plus, Trash2, ExternalLink, Camera, Calendar, Zap, Loader2 } from 'lucide-react';
 import { tpdbApi, type TPDBScene } from '../api/tpdbApi';
