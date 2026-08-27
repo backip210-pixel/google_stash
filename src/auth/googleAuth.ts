@@ -67,10 +67,24 @@ function setupDeepLinkListener() {
 
   App.addListener('appUrlOpen', (data: { url: string }) => {
     const url = data.url;
+    console.log('[Auth] Deep link received:', url.substring(0, 100));
+    
     if (url.startsWith('stashphotos://auth')) {
       const params = new URLSearchParams(url.split('?')[1] || '');
       const token = params.get('access_token');
+      const error = params.get('error');
+      
+      if (error) {
+        console.error('[Auth] OAuth error:', error);
+        updateAuthState({ error: `OAuth error: ${error}` });
+        return;
+      }
+      
       if (token) {
+        console.log('[Auth] Token captured, length:', token.length);
+        console.log('[Auth] Token preview:', token.substring(0, 30) + '...');
+        console.log('[Auth] Captured at:', new Date().toISOString());
+        
         deepLinkToken = token;
         updateAuthState({
           accessToken: token,
@@ -78,6 +92,9 @@ function setupDeepLinkListener() {
           error: null,
         });
         fetchUserInfo(token);
+      } else {
+        console.error('[Auth] No access_token in deep link');
+        updateAuthState({ error: 'No token received from Google' });
       }
     }
   });

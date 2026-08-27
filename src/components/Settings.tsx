@@ -16,43 +16,115 @@ export function Settings({ googleClientId, onClientIdChange }: SettingsProps) {
   const [testResult, setTestResult] = useState<{ success: boolean; message: string; details?: any } | null>(null);
 
   async function handleTestApi() {
-    setTestResult({ success: false, message: 'Testing...' });
+    setTestResult({ success: false, message: 'Running comprehensive diagnostics...' });
+    
+    const diagnostics: any = {
+      timestamp: new Date().toISOString(),
+      localStorage: {},
+      authState: null,
+      tokenValidation: null,
+      apiTests: []
+    };
+
     try {
-      const { photosApi } = await import('../api/photosApi');
+      // Step 1: Check localStorage
+      console.log('[Diagnostics] Step 1: Checking localStorage...');
+      diagnostics.localStorage = {
+        auth_state: localStorage.getItem('auth_state'),
+        gp_client_id: localStorage.getItem('gp_client_id'),
+        tpdb_api_key: localStorage.getItem('tpdb_api_key') ? '***present***' : '***missing***'
+      };
+
+      // Step 2: Check auth state
+      console.log('[Diagnostics] Step 2: Checking auth state...');
       const { getAuthState } = await import('../auth/googleAuth');
       const authState = getAuthState();
-      
+      diagnostics.authState = {
+        isAuthenticated: authState.isAuthenticated,
+        hasAccessToken: !!authState.accessToken,
+        tokenLength: authState.accessToken?.length || 0,
+        tokenPreview: authState.accessToken ? authState.accessToken.substring(0, 50) + '...' : 'none',
+        userName: authState.userName,
+        error: authState.error
+      };
+
       if (!authState.accessToken) {
-        setTestResult({ 
-          success: false, 
-          message: 'Not signed in. Please sign in with Google first.' 
+        setTestResult({
+          success: false,
+          message: '❌ Not signed in. No access token found.',
+          details: diagnostics
         });
         return;
       }
 
-      console.log('[Test API] Token preview:', authState.accessToken.substring(0, 30) + '...');
-      
-      // First validate the token
-      console.log('[Test API] Step 1: Validating token...');
-      const userinfo = await photosApi.validateToken();
-      console.log('[Test API] Token valid for:', userinfo.email);
-      
-      // Then try to list media items
-      console.log('[Test API] Step 2: Listing media items...');
-      const result = await photosApi.listMediaItems(5);
-      
-      console.log('[Test API] Result:', result);
+      // Step 3: Validate token
+      console.log('[Diagnostics] Step 3: Validating token...');
+      const { photosApi } = await import('../api/photosApi');
+      try {
+        const userinfo = await photosApi.validateToken();
+        diagnostics.tokenValidation = {
+          success: true,
+          email: userinfo.email,
+          scope: userinfo.scope
+        };
+      } catch (err: any) {
+        diagnostics.tokenValidation = {
+          success: false,
+          error: err.message
+        };
+      }
+
+      // Step 4: Try GET /mediaItems
+      console.log('[Diagnostics] Step 4: Testing GET /mediaItems...');
+      try {
+        const getResult = await photosApi.listMediaItems(3);
+        diagnostics.apiTests.push({
+          endpoint: 'GET /mediaItems',
+          success: true,
+          itemCount: getResult.mediaItems?.length || 0,
+          hasNextPage: !!getResult.nextPageToken
+        });
+      } catch (err: any) {
+        diagnostics.apiTests.push({
+          endpoint: 'GET /mediaItems',
+          success: false,
+          error: err.message
+        });
+      }
+
+      // Step 5: Try listing albums (different endpoint)
+      console.log('[Diagnostics] Step 5: Testing GET /albums...');
+      try {
+        const albumsResult = await photosApi.listAlbums(3);
+        diagnostics.apiTests.push({
+          endpoint: 'GET /albums',
+          success: true,
+          albumCount: albumsResult.albums?.length || 0
+        });
+      } catch (err: any) {
+        diagnostics.apiTests.push({
+          endpoint: 'GET /albums',
+          success: false,
+          error: err.message
+        });
+      }
+
+      // Final result
+      const successCount = diagnostics.apiTests.filter((t: any) => t.success).length;
       setTestResult({
-        success: true,
-        message: `✅ Token valid for ${userinfo.email}. Found ${result.mediaItems?.length || 0} items.`,
-        details: result
+        success: successCount > 0,
+        message: successCount > 0 
+          ? `✅ ${successCount}/${diagnostics.apiTests.length} API tests passed` 
+          : '❌ All API tests failed',
+        details: diagnostics
       });
+
     } catch (err: any) {
-      console.error('[Test API] Error:', err);
+      console.error('[Diagnostics] Fatal error:', err);
       setTestResult({
         success: false,
-        message: `❌ Error: ${err.message}`,
-        details: err
+        message: `❌ Diagnostic error: ${err.message}`,
+        details: { error: err.message, stack: err.stack }
       });
     }
   }
@@ -241,14 +313,28 @@ export function Settings({ googleClientId, onClientIdChange }: SettingsProps) {
               background: testResult.success ? 'rgba(63, 185, 80, 0.1)' : 'rgba(248, 81, 73, 0.1)',
               border: `1px solid ${testResult.success ? 'var(--color-success)' : 'var(--color-danger)'}`
             }}>
-              <p style={{ color: testResult.success ? 'var(--color-success)' : 'var(--color-danger)' }}>
+              <p style={{ color: testResult.success ? 'var(--color-success)' : 'var(--color-danger)', fontWeight: 'bold', marginBottom: '8px' }}>
                 {testResult.message}
               </p>
               {testResult.details && (
-                <pre className="mt-2 p-2 rounded overflow-x-auto" style={{ background: 'var(--color-bg-tertiary)', fontSize: '10px' }}>
-                  {JSON.stringify(testResult.details, null, 2)}
-                </pre>
+                <div style={{ background: 'var(--color-bg-tertiary)', padding: '8px', borderRadius: '4px', fontSize: '10px', maxHeight: '300px', overflow: 'auto' }}>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                    {JSON.stringify(testResult.details, null, 2)}
+                  </pre>
+                </div>
               )}
+              <button
+                onClick={() => {
+                  const text = JSON.stringify(testResult.details, null, 2);
+                  navigator.clipboard.writeText(text).then(() => {
+                    alert('Diagnostics copied to clipboard!');
+                  });
+                }}
+                className="mt-2 px-3 py-1 rounded text-xs cursor-pointer"
+                style={{ background: 'var(--color-accent)', color: 'white' }}
+              >
+                📋 Copy Diagnostics
+              </button>
             </div>
           )}
           <p className="text-xs mt-2" style={{ color: 'var(--color-text-secondary)' }}>

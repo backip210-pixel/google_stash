@@ -64,16 +64,24 @@ export class PhotosApiClient {
    */
   async validateToken(): Promise<{ email?: string; scope?: string }> {
     if (!this.accessToken) {
-      throw new Error('No access token');
+      throw new Error('No access token - please sign in again');
     }
 
-    console.log('[PhotosAPI] Validating token...');
+    console.log('[PhotosAPI] Validating token, length:', this.accessToken.length);
+    console.log('[PhotosAPI] Token preview:', this.accessToken.substring(0, 30) + '...');
+    
     const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: {
         'Authorization': `Bearer ${this.accessToken}`,
       },
     });
 
+    console.log('[PhotosAPI] Token validation response:', response.status);
+
+    if (response.status === 401) {
+      throw new Error('Token expired or invalid - please sign in again');
+    }
+    
     if (!response.ok) {
       throw new Error(`Token validation failed: ${response.status}`);
     }
