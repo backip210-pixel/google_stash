@@ -30,20 +30,28 @@ export function Settings({ googleClientId, onClientIdChange }: SettingsProps) {
         return;
       }
 
-      console.log('[Test API] Starting API test...');
+      console.log('[Test API] Token preview:', authState.accessToken.substring(0, 30) + '...');
+      
+      // First validate the token
+      console.log('[Test API] Step 1: Validating token...');
+      const userinfo = await photosApi.validateToken();
+      console.log('[Test API] Token valid for:', userinfo.email);
+      
+      // Then try to list media items
+      console.log('[Test API] Step 2: Listing media items...');
       const result = await photosApi.listMediaItems(5);
       
       console.log('[Test API] Result:', result);
       setTestResult({
         success: true,
-        message: `Success! Found ${result.mediaItems?.length || 0} items.`,
+        message: `✅ Token valid for ${userinfo.email}. Found ${result.mediaItems?.length || 0} items.`,
         details: result
       });
     } catch (err: any) {
       console.error('[Test API] Error:', err);
       setTestResult({
         success: false,
-        message: `Error: ${err.message}`,
+        message: `❌ Error: ${err.message}`,
         details: err
       });
     }

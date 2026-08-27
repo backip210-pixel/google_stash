@@ -60,22 +60,60 @@ export class PhotosApiClient {
   }
 
   /**
-   * List ALL media items from the user's library using search endpoint.
-   * The GET /mediaItems endpoint only returns app-created items,
-   * but POST /mediaItems:search returns the full library.
+   * Validate the token by calling userinfo endpoint
+   */
+  async validateToken(): Promise<{ email?: string; scope?: string }> {
+    if (!this.accessToken) {
+      throw new Error('No access token');
+    }
+
+    console.log('[PhotosAPI] Validating token...');
+    const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: {
+        'Authorization': `Bearer ${this.accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Token validation failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('[PhotosAPI] Token valid for:', data.email);
+    return data;
+  }
+
+  /**
+   * List ALL media items from the user's library.
+   * Try GET endpoint first, fallback to POST search if needed.
    */
   async listMediaItems(pageSize: number = 50, pageToken?: string): Promise<GPListResponse<GPMediaItem>> {
-    const body: Record<string, unknown> = { pageSize };
-    if (pageToken) body.pageToken = pageToken;
+    const params = new URLSearchParams({ pageSize: String(pageSize) });
+    if (pageToken) params.set('pageToken', pageToken);
 
-    console.log('[PhotosAPI] Calling mediaItems:search with body:', body);
-    const response = await this.fetchWithAuth('/mediaItems:search', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
-    const data = await response.json();
-    console.log('[PhotosAPI] Response:', { count: data.mediaItems?.length || 0, nextPageToken: !!data.nextPageToken });
-    return data;
+    console.log('[PhotosAPI] Trying GET /mediaItems endpoint');
+    
+    try {
+      const response = await this.fetchWithAuth(`/mediaItems?${params}`);
+      const data = await response.json();
+      console.log('[PhotosAPI] GET response:', { count: data.mediaItems?.length || 0 });
+      return data;
+    } catch (err: any) {
+      console.warn('[PhotosAPI] GET failed, trying POST search:', err.message);
+      
+      // Fallback to POST search
+      const body: Record<string, unknown> = { pageSize };
+      if (pageToken) body.pageToken = pageToken;
+
+      console.log('[PhotosAPI] Trying POST /mediaItems:search endpoint');
+      const response = await this.fetchWithAuth('/mediaItems:search', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+      const data = await response.json();
+      console.log('[PhotosAPI] POST response:', { count: data.mediaItems?.length || 0 });
+      return data;
+    }
   }
 
   /**
