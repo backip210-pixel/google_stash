@@ -13,9 +13,11 @@ export class PhotosApiClient {
     this.accessToken = null;
   }
 
+  private lastRequestDetails: { url?: string; headers?: any; error?: any } = {};
+
   private async fetchWithAuth(endpoint: string, options: RequestInit = {}): Promise<Response> {
     if (!this.accessToken) {
-      console.error('[PhotosAPI] ═══ NO ACCESS TOKEN ═══');
+      console.error('[PhotosAPI] ══ NO ACCESS TOKEN ═══');
       console.error('[PhotosAPI] This means auth completed but token was not saved');
       throw new Error('Not authenticated - no access token available');
     }
@@ -36,6 +38,15 @@ export class PhotosApiClient {
     };
     console.log('[PhotosAPI] Authorization header:', `Bearer ${this.accessToken.substring(0, 30)}...`);
     
+    // Store request details for diagnostics
+    this.lastRequestDetails = {
+      url,
+      headers: {
+        'Authorization': 'Bearer [REDACTED]',
+        'Content-Type': 'application/json',
+      }
+    };
+    
     const response = await fetch(url, {
       ...options,
       headers,
@@ -49,7 +60,7 @@ export class PhotosApiClient {
       console.error('[PhotosAPI] ═══ API ERROR RESPONSE ═══');
       console.error('[PhotosAPI] Status:', response.status);
       console.error('[PhotosAPI] Response body:', errorText);
-      console.error('[PhotosAPI] ═════════════════════════');
+      console.error('[PhotosAPI] ════════════════════════');
       
       let error;
       try {
@@ -59,11 +70,17 @@ export class PhotosApiClient {
         error = { error: { message: response.statusText } };
       }
       
+      this.lastRequestDetails.error = error;
+      
       throw new Error(error.error?.message || `API error: ${response.status}`);
     }
 
     console.log('[PhotosAPI] Response OK');
     return response;
+  }
+
+  getLastRequestDetails() {
+    return this.lastRequestDetails;
   }
 
   /**

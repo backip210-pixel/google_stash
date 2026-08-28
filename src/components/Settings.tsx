@@ -88,7 +88,8 @@ export function Settings({ googleClientId, onClientIdChange }: SettingsProps) {
         diagnostics.apiTests.push({
           endpoint: 'GET /mediaItems',
           success: false,
-          error: err.message
+          error: err.message,
+          requestDetails: photosApi.getLastRequestDetails()
         });
       }
 
@@ -105,7 +106,8 @@ export function Settings({ googleClientId, onClientIdChange }: SettingsProps) {
         diagnostics.apiTests.push({
           endpoint: 'GET /albums',
           success: false,
-          error: err.message
+          error: err.message,
+          requestDetails: photosApi.getLastRequestDetails()
         });
       }
 
