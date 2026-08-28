@@ -22,21 +22,27 @@ export class PhotosApiClient {
 
     console.log('[PhotosAPI] Making request:', endpoint);
     console.log('[PhotosAPI] Method:', options.method || 'GET');
-    console.log('[PhotosAPI] Token preview:', this.accessToken.substring(0, 20) + '...');
+    console.log('[PhotosAPI] Token length:', this.accessToken.length);
+    console.log('[PhotosAPI] Token preview:', this.accessToken.substring(0, 30) + '...');
     
     const url = `${PHOTOS_API_BASE}${endpoint}`;
     console.log('[PhotosAPI] Full URL:', url);
     
+    // Log the exact headers being sent
+    const headers = {
+      'Authorization': `Bearer ${this.accessToken}`,
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+    console.log('[PhotosAPI] Authorization header:', `Bearer ${this.accessToken.substring(0, 30)}...`);
+    
     const response = await fetch(url, {
       ...options,
-      headers: {
-        'Authorization': `Bearer ${this.accessToken}`,
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
     });
 
     console.log('[PhotosAPI] Response status:', response.status, response.statusText);
+    console.log('[PhotosAPI] Response headers:', Object.fromEntries(response.headers.entries()));
     
     if (!response.ok) {
       const errorText = await response.text();
@@ -48,6 +54,7 @@ export class PhotosApiClient {
       let error;
       try {
         error = JSON.parse(errorText);
+        console.error('[PhotosAPI] Parsed error:', JSON.stringify(error, null, 2));
       } catch {
         error = { error: { message: response.statusText } };
       }
