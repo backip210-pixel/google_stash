@@ -87,7 +87,7 @@ export class PhotosApiClient {
    * Validate the token by calling tokeninfo endpoint
    * This gives us more details than the userinfo endpoint
    */
-  async validateToken(): Promise<{ email?: string; scope?: string; expires_in?: number }> {
+  async validateToken(): Promise<{ email?: string; scope?: string; expires_in?: number; audience?: string }> {
     if (!this.accessToken) {
       throw new Error('No access token - please sign in again');
     }
@@ -106,7 +106,8 @@ export class PhotosApiClient {
         return {
           email: data.email,
           scope: data.scope,
-          expires_in: data.expires_in
+          expires_in: data.expires_in,
+          audience: data.audience  // This is the client ID the token was issued for!
         };
       }
     } catch (err) {
@@ -146,26 +147,43 @@ export class PhotosApiClient {
     console.log('[PhotosAPI] Trying GET /mediaItems endpoint');
     
     try {
+      // Try the GET endpoint WITHOUT search
       const response = await this.fetchWithAuth(`/mediaItems?${params}`);
       const data = await response.json();
       console.log('[PhotosAPI] GET response:', { count: data.mediaItems?.length || 0 });
       return data;
     } catch (err: any) {
-      console.warn('[PhotosAPI] GET failed, trying POST search:', err.message);
+      console.warn('[PhotosAPI] GET failed:', err.message);
       
-      // Fallback to POST search
-      const body: Record<string, unknown> = { pageSize };
-      if (pageToken) body.pageToken = pageToken;
-
-      console.log('[PhotosAPI] Trying POST /mediaItems:search endpoint');
-      const response = await this.fetchWithAuth('/mediaItems:search', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      });
-      const data = await response.json();
-      console.log('[PhotosAPI] POST response:', { count: data.mediaItems?.length || 0 });
-      return data;
+      // Try POST search with empty body (should return all items)
+      console.log('[PhotosAPI] Trying POST /mediaItems:search with empty body...');
+      try {
+        const response = await this.fetchWithAuth('/mediaItems:search', {
+          method: 'POST',
+          body: JSON.stringify({ pageSize }),
+        });
+        const data = await response.json();
+        console.log('[PhotosAPI] POST search response:', { count: data.mediaItems?.length || 0 });
+        return data;
+      } catch (err2: any) {
+        console.error('[PhotosAPI] POST search also failed:', err2.message);
+        throw err; // Throw the original error
+      }
     }
+  }
+
+  /**
+   * List albums
+   */
+  async listAlbums(pageSize: number = 50, pageToken?: string): Promise<GPListResponse<GPAlbum>> {
+    const params = new URLSearchParams({ pageSize: String(pageSize) });
+    if (pageToken) params.set('pageToken', pageToken);
+
+    console.log('[PhotosAPI] Trying GET /albums endpoint');
+    const response = await this.fetchWithAuth(`/albums?${params}`);
+    const data = await response.json();
+    console.log('[PhotosAPI] Albums response:', { count: data.albums?.length || 0 });
+    return data;
   }
 
   /**
@@ -176,24 +194,14 @@ export class PhotosApiClient {
     if (albumId) body.albumId = albumId;
     if (pageToken) body.pageToken = pageToken;
 
+    console.log('[PhotosAPI] Searching within album:', albumId || 'none');
     const response = await this.fetchWithAuth('/mediaItems:search', {
       method: 'POST',
       body: JSON.stringify(body),
     });
-    return response.json();
-  }
-
-  async getMediaItem(mediaItemId: string): Promise<GPMediaItem> {
-    const response = await this.fetchWithAuth(`/mediaItems/${mediaItemId}`);
-    return response.json();
-  }
-
-  async listAlbums(pageSize: number = 50, pageToken?: string): Promise<GPListResponse<GPAlbum>> {
-    const params = new URLSearchParams({ pageSize: String(pageSize) });
-    if (pageToken) params.set('pageToken', pageToken);
-
-    const response = await this.fetchWithAuth(`/albums?${params}`);
-    return response.json();
+    const data = await response.json();
+    console.log('[PhotosAPI] Search response:', { count: data.mediaItems?.length || 0 });
+    return data;
   }
 
   getThumbnailUrl(baseUrl: string, width: number = 256, height: number = 256): string {
