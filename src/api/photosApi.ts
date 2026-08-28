@@ -87,7 +87,7 @@ export class PhotosApiClient {
    * Validate the token by calling tokeninfo endpoint
    * This gives us more details than the userinfo endpoint
    */
-  async validateToken(): Promise<{ email?: string; scope?: string; expires_in?: number; audience?: string }> {
+  async validateToken(): Promise<any> {
     if (!this.accessToken) {
       throw new Error('No access token - please sign in again');
     }
@@ -98,42 +98,24 @@ export class PhotosApiClient {
     // Try tokeninfo endpoint first (gives more details)
     try {
       const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${this.accessToken}`);
-      console.log('[PhotosAPI] Tokeninfo response:', response.status);
+      console.log('[PhotosAPI] Tokeninfo response status:', response.status);
       
       if (response.ok) {
         const data = await response.json();
-        console.log('[PhotosAPI] Token info:', data);
+        console.log('[PhotosAPI] Full tokeninfo response:', JSON.stringify(data, null, 2));
         return {
-          email: data.email,
-          scope: data.scope,
-          expires_in: data.expires_in,
-          audience: data.audience  // This is the client ID the token was issued for!
+          success: true,
+          ...data  // Return ALL fields from tokeninfo
         };
+      } else {
+        const errorText = await response.text();
+        console.log('[PhotosAPI] Tokeninfo error:', errorText);
+        return { success: false, error: errorText };
       }
-    } catch (err) {
-      console.log('[PhotosAPI] Tokeninfo failed, trying userinfo...');
+    } catch (err: any) {
+      console.log('[PhotosAPI] Tokeninfo failed:', err.message);
+      return { success: false, error: err.message };
     }
-
-    // Fallback to userinfo endpoint
-    const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: {
-        'Authorization': `Bearer ${this.accessToken}`,
-      },
-    });
-
-    console.log('[PhotosAPI] Userinfo response:', response.status);
-
-    if (response.status === 401) {
-      throw new Error('Token expired or invalid - please sign in again');
-    }
-    
-    if (!response.ok) {
-      throw new Error(`Token validation failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log('[PhotosAPI] Token valid for:', data.email);
-    return { email: data.email };
   }
 
   /**
