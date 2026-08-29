@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Stash Photos",
+    "slug": "stash-photos-native",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Stash Photos needs access to your photo library to tag and organize your photos.",
+        "NSPhotoLibraryAddUsageDescription": "Stash Photos needs permission to save tagged photos back to your library."
+      }
+    },
+    "android": {
+      "permissions": ["READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE", "ACCESS_MEDIA_LOCATION"],
+      "package": "com.stashphotos.app"
+    },
+    "plugins": [
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Stash Photos to access your photos for tagging.",
+          "savePhotosPermission": "Allow Stash Photos to save tagged photos.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ]
+    ]
+  }
+}
