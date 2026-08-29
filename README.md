@@ -10,6 +10,7 @@
 
 <p align="center">
   <a href="#features">Features</a> •
+  <a href="#apps">Two Apps</a> •
   <a href="#screenshots">Screenshots</a> •
   <a href="#setup">Setup</a> •
   <a href="#install-apk">Install APK</a> •
@@ -21,9 +22,45 @@
 
 ## About
 
-Stash Photos is a Progressive Web App (PWA) and Android app that connects to your **Google Photos** library and gives you a powerful **tagging and organization** system — all stored locally on your device.
+Stash Photos is a **two-app system** for tagging and organizing your Google Photos:
+
+1. **Web App** (this repo root) — Browse and tag photos already in Google Photos via API
+2. **Native App** (`native/` directory) — Tag photos on your device BEFORE uploading to Google Photos
+
+The native app is the **recommended approach** as it avoids Google Photos API limitations by writing tags directly to photo files.
 
 Think of it as the organization power of [Stash](https://github.com/stashapp/stash), but for your personal Google Photos.
+
+## Two Apps
+
+### 📱 Native App (Recommended) — `native/`
+
+**Tag photos BEFORE uploading to Google Photos**
+
+- Browse your device photos
+- Add custom tags with colors
+- Renames files: `2024-01-15_Beach_Sunset_Family.jpg`
+- Writes IPTC/EXIF metadata
+- Google Photos can search by your tags natively!
+
+**Best for:** Preparing photos before upload, full control over metadata
+
+[→ Native App README](native/README.md)
+
+### 🌐 Web App — Root directory
+
+**Tag photos already in Google Photos**
+
+- Connects to Google Photos API
+- Browse your existing library
+- Tag and organize in the cloud
+- PWA works on any device
+
+**Best for:** Managing existing Google Photos library
+
+[→ Web App Setup](#setup)
+
+---
 
 ## Features
 
@@ -310,9 +347,25 @@ npx cap open android # Open in Android Studio
 
 ## Known Limitations
 
+### Web App
 - **Read-only**: The Google Photos API doesn't allow writing tags/labels back to photos
 - **Local-only data**: Tags/ratings/notes live in your browser's IndexedDB — clearing browser data deletes them (use Export Data as backup)
 - **OAuth scope**: Uses `photoslibrary.readonly` — cannot upload or modify photos
+- **API issues**: Some users report "insufficient scopes" errors even with correct configuration
+
+### Native App
+- Requires manual upload to Google Photos (no auto-sync yet)
+- Metadata writing requires proper EXIF/IPTC library integration
+- Currently in MVP stage
+
+## Why Use the Native App?
+
+The native app solves the web app's limitations by:
+- ✅ Writing tags directly to photo files (no API needed)
+- ✅ Working with ANY number of photos
+- ✅ Tags persist even if you switch apps
+- ✅ Google Photos search works natively
+- ✅ No OAuth/scope issues
 
 ## Roadmap
 
