@@ -42,9 +42,9 @@ jobs:
       - name: Fix settings.gradle plugin repositories
         working-directory: android
         run: |
-          # Add plugin repositories to the beginning of settings.gradle
-          sed -i '1i pluginManagement {\n    repositories {\n        gradlePluginPortal()\n        mavenCentral()\n        google()\n    }\n}\n' settings.gradle
-          cat settings.gradle | head -20
+          # Add repositories to existing pluginManagement block
+          sed -i '/pluginManagement {/a\    repositories {\n        gradlePluginPortal()\n        mavenCentral()\n        google()\n    }' settings.gradle
+          cat settings.gradle | head -15
 
       - name: Build APK with Gradle
         working-directory: android
