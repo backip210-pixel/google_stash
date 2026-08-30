@@ -42,35 +42,9 @@ jobs:
       - name: Fix settings.gradle plugin repositories
         working-directory: android
         run: |
-          python3 -c "
-          import subprocess
-          expo_path = subprocess.check_output(['node', '--print', \"require.resolve('expo/package.json')\"]).decode().strip()
-          rn_path = subprocess.check_output(['node', '--print', \"require.resolve('react-native/package.json')\"]).decode().strip()
-          cli_path = subprocess.check_output(['node', '--print', \"require('@react-native-community/cli-platform-android/package.json')\"]).decode().strip()
-          lines = [
-              'pluginManagement {',
-              '    repositories {',
-              '        gradlePluginPortal()',
-              '        mavenCentral()',
-              '        google()',
-              '    }',
-              '}',
-              '',
-              \"rootProject.name = 'StashPhotos'\",
-              '',
-              'apply from: new File(\"' + expo_path + '\", \"../scripts/autolinking.gradle\")',
-              'useExpoModules()',
-              '',
-              'apply from: new File(\"' + cli_path + '\", \"../native_modules.gradle\")',
-              'applyNativeModulesSettingsGradle(settings)',
-              '',
-              \"include ':app'\",
-              'includeBuild(new File(\"' + rn_path + '\").getParentFile())',
-          ]
-          with open('settings.gradle', 'w') as f:
-              f.write('\n'.join(lines) + '\n')
-          print('settings.gradle created')
-          "
+          # Add plugin repositories to the beginning of settings.gradle
+          sed -i '1i pluginManagement {\n    repositories {\n        gradlePluginPortal()\n        mavenCentral()\n        google()\n    }\n}\n' settings.gradle
+          cat settings.gradle | head -20
 
       - name: Build APK with Gradle
         working-directory: android
