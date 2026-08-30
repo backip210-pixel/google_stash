@@ -39,17 +39,15 @@ jobs:
       - name: Generate native Android project
         run: npx expo prebuild --platform android --clean
 
-      - name: Fix plugin repositories
+      - name: Check Gradle wrapper version
         working-directory: android
-        run: |
-          # Add plugin repository for React Native plugins
-          sed -i '/pluginManagement {/a\    repositories {\n        google()\n        mavenCentral()\n        gradlePluginPortal()\n    }' settings.gradle
+        run: cat gradle/wrapper/gradle-wrapper.properties | grep distributionUrl
 
       - name: Build APK with Gradle
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
