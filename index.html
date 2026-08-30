@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stash Photos - TPDB Hash Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📸 Stash Photos</h1>
+            <p class="subtitle">Generate hashes for ThePornDB auto-tagger</p>
+        </header>
+
+        <div class="card">
+            <h2>1. Select Photos</h2>
+            <div class="upload-area" id="dropZone">
+                <p>📁 Drag & drop photos here or</p>
+                <button id="selectBtn" class="btn-primary">Choose Files</button>
+                <input type="file" id="fileInput" multiple accept="image/*,video/*" hidden>
+                <p class="hint">Supports: JPG, PNG, MP4, AVI, MKV, MOV</p>
+            </div>
+        </div>
+
+        <div class="card" id="selectedFiles" style="display: none;">
+            <h2>2. Selected Files (<span id="fileCount">0</span>)</h2>
+            <div class="file-list" id="fileList"></div>
+            <button id="clearBtn" class="btn-secondary">Clear All</button>
+        </div>
+
+        <div class="card" id="generateSection" style="display: none;">
+            <h2>3. Generate Hashes</h2>
+            <div class="progress-container" id="progressContainer" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p class="progress-text" id="progressText">Processing: 0/0</p>
+            </div>
+            <button id="generateBtn" class="btn-primary">Generate Hashes</button>
+        </div>
+
+        <div class="card" id="resultsSection" style="display: none;">
+            <h2>4. Export Results</h2>
+            <div class="results-info">
+                <p>✅ Generated <span id="hashCount">0</span> hashes</p>
+                <div class="hash-preview" id="hashPreview"></div>
+            </div>
+            <button id="exportBtn" class="btn-success">💾 Download JSON</button>
+            <button id="copyBtn" class="btn-secondary">📋 Copy to Clipboard</button>
+        </div>
+
+        <div class="card info-card">
+            <h3>ℹ️ How to Use</h3>
+            <ol>
+                <li>Select photos/videos from your device</li>
+                <li>Click "Generate Hashes"</li>
+                <li>Download the JSON file</li>
+                <li>Use with Stash or ThePornDB scraper</li>
+            </ol>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

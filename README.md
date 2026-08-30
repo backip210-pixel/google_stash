@@ -1,171 +1,117 @@
-# Stash Photos Native
+# Stash Photos - TPDB Hash Generator
 
-A React Native app for tagging photos and generating hashes for **ThePornDB** auto-tagger integration.
+A simple web app to generate SHA256 and OSHash hashes for photos and videos, compatible with ThePornDB auto-tagger.
 
-## Features
+## ✨ Features
 
-### Photo Tagging
-- Browse device photo library
-- Multi-select photos for batch operations
-- Add custom tags with color coding
-- Rename files with tags: `2024-01-15_Beach_Sunset_Family.jpg`
-- Tags written to filename for Google Photos search
+- 📁 **Drag & drop** or select files from your device
+- 🔐 **SHA256 hash** generation for all files
+-  **OSHash generation** for video files (MP4, AVI, MKV, MOV, etc.)
+- 💾 **Export to JSON** file for ThePornDB scraper
+- 📋 **Copy to clipboard** for quick sharing
+- 🌐 **Works in any browser** - no installation needed
+- 📱 **Mobile-friendly** - works on phones and tablets
 
-### ThePornDB Hash Generation
-- Generate **SHA256** hashes for photo matching
-- Generate **OSHash** for video file matching
-- Export hashes to JSON for TPDB scraper
-- Batch processing with progress indicator
+## 🚀 Live Demo
 
-### Adaptive Icons
-- Works with all Android launcher shapes (circular, rounded square, square)
-- Dark theme optimized for OLED screens
+Visit: **https://backip210-pixel.github.io/stash-photos/**
 
-## Installation
+## 📖 How to Use
 
-### Prerequisites
-- Node.js 18+
-- npm
-- Expo CLI: `npm install -g eas-cli`
-- Android device or emulator
+1. **Open the app** in your browser
+2. **Select photos/videos** - drag & drop or click "Choose Files"
+3. **Click "Generate Hashes"** - wait for processing
+4. **Download JSON** - save the hash file
+5. **Use with ThePornDB** - import into Stash or your scraper
 
-### Setup
-```bash
-# Install dependencies
-npm install
+##  Technical Details
 
-# Start development server
-npx expo start
+### Hash Types Generated
 
-# Run on Android
-npx expo start --android
-```
+#### SHA256
+- Standard cryptographic hash
+- Works for all file types
+- Used by most scrapers for matching
 
-## Building APK
+#### OSHash (Video files only)
+- Based on file size + first/last 64KB
+- Similar to ThePornDB's OSHash format
+- Helps identify video files
 
-### Using EAS Build (Recommended)
-```bash
-# Install EAS CLI
-npm install -g eas-cli
+### JSON Output Format
 
-# Login to Expo
-eas login
-
-# Configure project (first time only)
-eas build:configure
-
-# Build APK
-eas build --platform android --profile preview
-```
-
-### Using GitHub Actions
-1. Fork this repository
-2. Go to Settings → Secrets → Actions
-3. Add `EXPO_TOKEN` secret (get from `eas whoami`)
-4. Push to main branch - APK will build automatically
-
-## Usage
-
-### Tagging Photos
-1. Open app and grant photo library permissions
-2. Long-press photos to enter selection mode
-3. Tap additional photos to select
-4. Tap **Tag** button in header
-5. Create new tags or select existing ones
-6. Tap **Apply Tags** to rename files
-
-### Generating Hashes for ThePornDB
-1. Select photos/videos (long-press to start selection)
-2. Tap **Hash** button in header
-3. Tap **Generate Hashes**
-4. Wait for processing to complete
-5. Tap **Export JSON** to save hash file
-6. Use the JSON file with your TPDB scraper
-
-### Hash File Format
 ```json
 [
   {
     "sha256": "abc123...",
     "osHash": "def456...",
     "size": 1234567,
-    "filename": "IMG_1234.jpg"
+    "filename": "video.mp4"
   }
 ]
 ```
 
-## ThePornDB Integration
+## 🛠️ Development
 
-The generated hash file can be used with scrapers like:
-- **Stash** - Import hashes for automatic scene matching
-- **Jellyfin Plugin.ThePornDB** - Hash-based matching
-- **Custom scripts** - Use the JSON directly with TPDB API
+This is a **static web app** - no build process needed!
 
-### Example: Stash Import
-1. Export hashes from this app
-2. In Stash, go to Settings → Metadata Providers
-3. Add your TPDB API key
-4. Use the hash file for batch tagging
+### Files
+- `index.html` - Main page
+- `styles.css` - Styling
+- `app.js` - Application logic
 
-## Project Structure
+### Local Testing
 
-```
-stash-photos-native/
-├── App.tsx                    # Main app component
-├── src/
-│   ├── services/
-│   │   ├── photoService.ts    # Photo library access
-│   │   ├── fileService.ts     # File operations & renaming
-│   │   └── hashService.ts     # Hash generation (SHA256, OSHash)
-│   └── types/
-│       └── index.ts           # TypeScript types
-├── assets/
-│   └── icons/                 # Adaptive icon XML files
-├── app.json                   # Expo config
-├── eas.json                   # EAS Build config
-└── package.json
-```
+Just open `index.html` in your browser:
 
-## Adaptive Icons
-
-The app uses Android adaptive icons with separate foreground and background layers:
-- **Background**: Dark navy (#0d1117)
-- **Foreground**: Camera icon in blue (#58a6ff)
-
-This ensures the icon looks correct on all launcher shapes.
-
-## Development
-
-### Running Tests
 ```bash
-npx tsc --noEmit    # Type checking
+# macOS
+open index.html
+
+# Linux
+xdg-open index.html
+
+# Windows
+start index.html
 ```
 
-### Code Style
-- TypeScript strict mode
-- React Native best practices
-- Expo managed workflow
+Or use a local server:
 
-## Troubleshooting
+```bash
+# Python
+python3 -m http.server 8000
 
-### Photos not showing
-- Check app permissions in Android settings
-- Ensure photos are on device (not cloud-only)
+# Node.js
+npx serve
+```
 
-### Hash generation fails
-- Ensure files are accessible
-- Check available storage space
-- Large files may take longer
+Then visit: http://localhost:8000
 
-### APK build fails
-- Clear Expo cache: `npx expo start --clear`
-- Delete node_modules and reinstall
-- Check EAS CLI version: `eas --version`
+##  Deployment
 
-## License
+The app auto-deploys to GitHub Pages on every push to `main`.
 
-MIT
+### Manual Deployment
 
-## Contributing
+1. Go to your repository settings
+2. Enable GitHub Pages
+3. Set source to `main` branch
+4. The app will be live at: `https://[username].github.io/[repo]/`
 
-PRs welcome! Please read the contributing guidelines first.
+## 🤝 Contributing
+
+Pull requests welcome! This is a simple project, so contributions are easy.
+
+## 📝 License
+
+MIT License - feel free to use and modify as needed.
+
+## 🔗 Related Projects
+
+- [ThePornDB](https://theporndb.net) - Movie and scene database
+- [Stash](https://github.com/stashapp/stash) - Media organizer
+- [Jellyfin Plugin.ThePornDB](https://github.com/ThePornDatabase/Jellyfin.Plugin.ThePornDB) - Jellyfin integration
+
+---
+
+**Made with ❤️ for the data hoarding community**
