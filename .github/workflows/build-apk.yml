@@ -39,6 +39,12 @@ jobs:
       - name: Generate native Android project
         run: npx expo prebuild --platform android --clean
 
+      - name: Fix plugin repositories
+        working-directory: android
+        run: |
+          # Add plugin repository for React Native plugins
+          sed -i '/pluginManagement {/a\    repositories {\n        google()\n        mavenCentral()\n        gradlePluginPortal()\n    }' settings.gradle
+
       - name: Build APK with Gradle
         working-directory: android
         run: |
