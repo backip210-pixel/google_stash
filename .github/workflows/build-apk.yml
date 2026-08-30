@@ -42,10 +42,13 @@ jobs:
       - name: Fix settings.gradle plugin repositories
         working-directory: android
         run: |
-          # Backup original
-          cp settings.gradle settings.gradle.bak
-          # Create proper plugin management block
-          cat > settings.gradle << 'EOF'
+          # Get paths from node
+          EXPO_PATH=$(node --print "require.resolve('expo/package.json')")
+          RN_PATH=$(node --print "require.resolve('react-native/package.json')")
+          CLI_PATH=$(node --print "require('@react-native-community/cli-platform-android/package.json')")
+          
+          # Create proper settings.gradle
+          cat > settings.gradle << EOF
           pluginManagement {
               repositories {
                   gradlePluginPortal()
@@ -56,14 +59,14 @@ jobs:
 
           rootProject.name = 'StashPhotos'
 
-          apply from: new File(["node", "--print", "require.resolve('expo/package.json')"].execute(null, rootDir).text.trim(), "../scripts/autolinking.gradle")
+          apply from: new File("${EXPO_PATH}", "../scripts/autolinking.gradle")
           useExpoModules()
 
-          apply from: new File(["node", "--print", "require('@react-native-community/cli-platform-android/package.json')"].execute(null, rootDir).text.trim(), "../native_modules.gradle")
+          apply from: new File("${CLI_PATH}", "../native_modules.gradle")
           applyNativeModulesSettingsGradle(settings)
 
           include ':app'
-          includeBuild(new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile())
+          includeBuild(new File("${RN_PATH}").getParentFile())
           EOF
 
       - name: Build APK with Gradle
