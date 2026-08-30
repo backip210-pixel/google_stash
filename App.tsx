@@ -12,12 +12,15 @@ import {
   Modal,
   SafeAreaView,
   StatusBar,
+  ScrollView,
 } from 'react-native';
 import * as MediaLibrary from 'expo-media-library';
+import * as FileSystem from 'expo-file-system';
 import type { PhotoAsset, Tag, AppView } from './src/types';
 import { TAG_COLORS, DEFAULT_CATEGORIES } from './src/types';
 import { fetchPhotos, requestPermissions, extractTagsFromFilename } from './src/services/photoService';
 import { renamePhoto, batchRenamePhotos } from './src/services/fileService';
+import { generateAllHashes, exportHashesToJson } from './src/services/hashService';
 
 // Theme colors
 const COLORS = {
@@ -47,6 +50,17 @@ export default function App() {
   const [showTagEditor, setShowTagEditor] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [newTagName, setNewTagName] = useState('');
+  
+  // Hash generation for ThePornDB
+  const [showHashGenerator, setShowHashGenerator] = useState(false);
+  const [generatingHashes, setGeneratingHashes] = useState(false);
+  const [hashProgress, setHashProgress] = useState({ current: 0, total: 0 });
+  const [generatedHashes, setGeneratedHashes] = useState<Array<{
+    sha256: string;
+    osHash?: string;
+    size: number;
+    filename: string;
+  }>>([]);
   
   // Check permissions on mount
   useEffect(() => {
@@ -163,6 +177,77 @@ export default function App() {
     setSelectedTags(selectedTags.filter((t) => t !== tagName));
   }
   
+  function openHashGenerator() {
+    if (selectedIds.size === 0) {
+      Alert.alert('No photos selected', 'Please select at least one photo');
+      return;
+    }
+    setShowHashGenerator(true);
+  }
+  
+  async function generateHashes() {
+    const selectedPhotos = photos.filter((p) => selectedIds.has(p.id));
+    setGeneratingHashes(true);
+    setHashProgress({ current: 0, total: selectedPhotos.length });
+    setGeneratedHashes([]);
+    
+    const allHashes: Array<{
+      sha256: string;
+      osHash?: string;
+      size: number;
+      filename: string;
+    }> = [];
+    
+    try {
+      for (let i = 0; i < selectedPhotos.length; i++) {
+        const photo = selectedPhotos[i];
+        const hashes = await generateAllHashes(photo.uri);
+        allHashes.push(hashes);
+        setHashProgress({ current: i + 1, total: selectedPhotos.length });
+      }
+      
+      setGeneratedHashes(allHashes);
+      Alert.alert(
+        'Success',
+        `Generated hashes for ${allHashes.length} files. Ready to export.`
+      );
+    } catch (error) {
+      Alert.alert('Error', 'Failed to generate hashes');
+      console.error(error);
+    } finally {
+      setGeneratingHashes(false);
+    }
+  }
+  
+  async function exportHashes() {
+    if (generatedHashes.length === 0) {
+      Alert.alert('No hashes', 'Generate hashes first');
+      return;
+    }
+    
+    try {
+      const outputDir = `${FileSystem.documentDirectory}hashes/`;
+      const dirInfo = await FileSystem.getInfoAsync(outputDir);
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(outputDir, { intermediates: true });
+      }
+      
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const outputPath = `${outputDir}tpdb_hashes_${timestamp}.json`;
+      
+      await exportHashesToJson(generatedHashes, outputPath);
+      
+      Alert.alert(
+        'Exported',
+        `Hash file saved to:\n${outputPath}\n\nYou can now use this file with ThePornDB scraper.`,
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      Alert.alert('Error', 'Failed to export hashes');
+      console.error(error);
+    }
+  }
+  
   // Render permission request screen
   if (!permissionsGranted) {
     return (
@@ -225,6 +310,9 @@ export default function App() {
               </TouchableOpacity>
               <TouchableOpacity style={styles.tagButton} onPress={openTagEditor}>
                 <Text style={styles.tagButtonText}>Tag</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.hashButton} onPress={openHashGenerator}>
+                <Text style={styles.hashButtonText}>Hash</Text>
               </TouchableOpacity>
             </>
           )}
@@ -326,6 +414,104 @@ export default function App() {
               Apply Tags ({selectedIds.size} photos)
             </Text>
           </TouchableOpacity>
+        </SafeAreaView>
+      </Modal>
+      
+      {/* Hash Generator Modal */}
+      <Modal
+        visible={showHashGenerator}
+        animationType="slide"
+        onRequestClose={() => setShowHashGenerator(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Generate Hashes</Text>
+            <TouchableOpacity onPress={() => setShowHashGenerator(false)}>
+              <Text style={styles.closeButton}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.modalContent}>
+            <Text style={styles.sectionTitle}>
+              ThePornDB Hash Generator
+            </Text>
+            <Text style={styles.descriptionText}>
+              Generate SHA256 and OSHash values for selected photos/videos. 
+              These hashes can be used with ThePornDB scraper to automatically 
+              identify and tag your content.
+            </Text>
+            
+            <View style={styles.hashInfoBox}>
+              <Text style={styles.hashInfoTitle}> Progress</Text>
+              <Text style={styles.hashInfoText}>
+                {generatingHashes 
+                  ? `Processing: ${hashProgress.current}/${hashProgress.total}`
+                  : generatedHashes.length > 0
+                  ? `Generated: ${generatedHashes.length} hashes`
+                  : `${selectedIds.size} photos selected`
+                }
+              </Text>
+            </View>
+            
+            {generatedHashes.length > 0 && (
+              <View style={styles.hashResultsContainer}>
+                <Text style={styles.sectionTitle}>Generated Hashes</Text>
+                {generatedHashes.slice(0, 5).map((hash, index) => (
+                  <View key={index} style={styles.hashResultItem}>
+                    <Text style={styles.hashResultFilename} numberOfLines={1}>
+                      {hash.filename}
+                    </Text>
+                    <Text style={styles.hashResultHash} numberOfLines={1}>
+                      SHA256: {hash.sha256.substring(0, 32)}...
+                    </Text>
+                    {hash.osHash && (
+                      <Text style={styles.hashResultHash} numberOfLines={1}>
+                        OSHash: {hash.osHash.substring(0, 32)}...
+                      </Text>
+                    )}
+                  </View>
+                ))}
+                {generatedHashes.length > 5 && (
+                  <Text style={styles.hashMoreText}>
+                    +{generatedHashes.length - 5} more
+                  </Text>
+                )}
+              </View>
+            )}
+          </ScrollView>
+          
+          <View style={styles.modalActions}>
+            {!generatingHashes && generatedHashes.length === 0 && (
+              <TouchableOpacity 
+                style={styles.generateButton} 
+                onPress={generateHashes}
+              >
+                <Text style={styles.generateButtonText}>
+                  Generate Hashes ({selectedIds.size} files)
+                </Text>
+              </TouchableOpacity>
+            )}
+            
+            {generatingHashes && (
+              <View style={styles.progressContainer}>
+                <ActivityIndicator size="large" color={COLORS.accent} />
+                <Text style={styles.progressText}>
+                  {hashProgress.current}/{hashProgress.total}
+                </Text>
+              </View>
+            )}
+            
+            {generatedHashes.length > 0 && !generatingHashes && (
+              <TouchableOpacity 
+                style={styles.exportButton} 
+                onPress={exportHashes}
+              >
+                <Text style={styles.exportButtonText}>
+                  Export JSON ({generatedHashes.length} hashes)
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -569,6 +755,103 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   applyButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  hashButton: {
+    backgroundColor: COLORS.accent,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  hashButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  descriptionText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  hashInfoBox: {
+    backgroundColor: COLORS.bgTertiary,
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  hashInfoTitle: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginBottom: 4,
+  },
+  hashInfoText: {
+    fontSize: 16,
+    color: COLORS.text,
+    fontWeight: '600',
+  },
+  hashResultsContainer: {
+    marginBottom: 16,
+  },
+  hashResultItem: {
+    backgroundColor: COLORS.bgTertiary,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  hashResultFilename: {
+    fontSize: 14,
+    color: COLORS.text,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  hashResultHash: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontFamily: 'monospace',
+  },
+  hashMoreText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  modalActions: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  generateButton: {
+    backgroundColor: COLORS.accent,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  generateButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    padding: 16,
+  },
+  progressText: {
+    fontSize: 16,
+    color: COLORS.text,
+  },
+  exportButton: {
+    backgroundColor: COLORS.success,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  exportButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',

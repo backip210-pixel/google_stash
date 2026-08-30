@@ -1,83 +1,54 @@
-// Google Photos API types
-export interface GPMediaItem {
-  id: string;
-  description: string;
-  productUrl: string;
-  baseUrl: string;
-  mimeType: string;
-  filename: string;
-  mediaMetadata: {
-    creationTime: string;
-    width: string;
-    height: string;
-    photo?: {
-      cameraMake?: string;
-      cameraModel?: string;
-      focalLength?: number;
-      apertureFNumber?: number;
-      isoEquivalent?: number;
-      exposureTime?: string;
-    };
-    video?: {
-      cameraMake?: string;
-      cameraModel?: string;
-      fps?: number;
-      status?: string;
-    };
-  };
-}
-
-export interface GPAlbum {
-  id: string;
-  title: string;
-  productUrl: string;
-  coverPhotoBaseUrl: string;
-  coverPhotoMediaItemId: string;
-  isWriteable: boolean;
-  mediaItemsCount: string;
-}
-
-export interface GPListResponse<T> {
-  mediaItems?: T[];
-  albums?: T[];
-  nextPageToken?: string;
-}
-
-// Our app types
+// Tag types
 export interface Tag {
-  id?: number;
+  id: string;
   name: string;
   color: string;
-  categoryId?: number;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: number;
 }
 
 export interface TagCategory {
-  id?: number;
+  id: string;
   name: string;
   icon: string;
-  createdAt: Date;
-  updatedAt: Date;
+  tags: Tag[];
 }
 
-export interface PhotoTag {
-  id?: number;
-  photoId: string;
-  tagId: number;
-  createdAt: Date;
+// Photo types
+export interface PhotoAsset {
+  id: string;
+  uri: string;
+  filename: string;
+  width: number;
+  height: number;
+  mediaType: 'photo' | 'video' | 'unknown';
+  creationTime?: number;
+  modificationTime?: number;
+  duration?: number;
+  // Tags extracted from filename or metadata
+  existingTags: string[];
 }
 
-export interface PhotoMetadata {
-  photoId: string;
-  notes: string;
-  rating: number;
-  lastViewedAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
+// App state
+export type AppView = 'gallery' | 'tags' | 'settings';
+
+export interface SelectionState {
+  selectedPhotoIds: Set<string>;
+  isSelecting: boolean;
 }
 
-// View state
-export type ViewMode = 'grid' | 'list';
-export type SortMode = 'date-desc' | 'date-asc' | 'name-asc' | 'name-desc';
-export type AppView = 'gallery' | 'tags' | 'albums' | 'tagger' | 'settings';
+// Color palette for tags
+export const TAG_COLORS = [
+  '#1f6feb', '#238636', '#da3633', '#f85149', '#bc8cff',
+  '#3fb950', '#58a6ff', '#d29922', '#f778ba', '#79c0ff',
+  '#a371f7', '#56d364', '#e3b341', '#ff7b72', '#8b949e',
+];
+
+// Default categories
+export const DEFAULT_CATEGORIES: Omit<TagCategory, 'tags'>[] = [
+  { id: 'people', name: 'People', icon: '👤' },
+  { id: 'places', name: 'Places', icon: '📍' },
+  { id: 'events', name: 'Events', icon: '🎉' },
+  { id: 'objects', name: 'Objects', icon: '' },
+  { id: 'themes', name: 'Themes', icon: '🎨' },
+  { id: 'custom', name: 'Custom', icon: '🏷️' },
+];
