@@ -46,11 +46,8 @@ jobs:
           sed -i '/pluginManagement {/a\    repositories {\n        gradlePluginPortal()\n        mavenCentral()\n        google()\n    }' settings.gradle
           cat settings.gradle | head -15
 
-      - name: Build APK with Gradle
-        working-directory: android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+      - name: Build APK with React Native CLI
+        run: npx react-native build-android --mode=debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
