@@ -11,28 +11,17 @@ public class CryptoModule: Module {
 
     Function("digestString", digestString)
 
-    AsyncFunction("getRandomBase64StringAsync", getRandomBase64String)
-
-    Function("getRandomBase64String", getRandomBase64String)
-
     Function("getRandomValues", getRandomValues)
 
     Function("digest", digest)
 
-    Function("randomUUID") {
-      UUID().uuidString.lowercased()
-    }
+    Function("randomUUID", randomUUID())
   }
-}
 
-private func getRandomBase64String(length: Int) throws -> String {
-  var bytes = [UInt8](repeating: 0, count: length)
-  let status = SecRandomCopyBytes(kSecRandomDefault, length, &bytes)
-
-  guard status == errSecSuccess else {
-    throw FailedGeneratingRandomBytesException(status)
+  @OptimizedFunction
+  private func randomUUID() -> String {
+    return UUID().uuidString.lowercased()
   }
-  return Data(bytes).base64EncodedString()
 }
 
 private func digestString(algorithm: DigestAlgorithm, str: String, options: DigestOptions) throws -> String {
@@ -73,13 +62,13 @@ private func digest(algorithm: DigestAlgorithm, output: TypedArray, data: TypedA
   _ = algorithm.digest(data.rawPointer, UInt32(data.byteLength), outputPtr)
 }
 
-private class LossyConversionException: Exception {
+private final class LossyConversionException: Exception {
   override var reason: String {
     "Unable to convert given string without losing some information"
   }
 }
 
-private class FailedGeneratingRandomBytesException: GenericException<OSStatus> {
+private final class FailedGeneratingRandomBytesException: GenericException<OSStatus> {
   override var reason: String {
     "Generating random bytes has failed with OSStatus code: \(param)"
   }
