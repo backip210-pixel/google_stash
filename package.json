@@ -13,14 +13,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "expo": "~51.0.0",
-    "expo-crypto": "^57.0.2",
-    "expo-file-system": "^57.0.6",
-    "expo-image-picker": "^57.0.14",
-    "expo-media-library": "^57.0.4",
+    "expo": "~52.0.0",
+    "expo-crypto": "~14.0.0",
+    "expo-file-system": "~18.0.0",
+    "expo-image-picker": "~16.0.0",
+    "expo-media-library": "~17.0.0",
     "metro": "^0.81.0",
-    "react": "^19.2.8",
-    "react-native": "^0.86.3"
+    "react": "^18.3.1",
+    "react-native": "^0.76.9"
   },
   "devDependencies": {
     "@types/react": "^19.2.18",
