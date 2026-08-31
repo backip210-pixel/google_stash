@@ -1,0 +1,24 @@
+{
+  "name": "stash-photos",
+  "version": "1.0.0",
+  "description": "A simple web app to generate SHA256 and OSHash hashes for photos and videos, compatible with ThePornDB auto-tagger.",
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "expo": "~52.0.0",
+    "expo-crypto": "^57.0.2",
+    "expo-file-system": "^57.0.6",
+    "expo-image-picker": "^57.0.14",
+    "expo-media-library": "^57.0.4",
+    "react": "^19.2.8",
+    "react-native": "^0.86.3"
+  }
+}

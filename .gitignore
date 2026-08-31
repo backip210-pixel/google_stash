@@ -10,7 +10,6 @@ Thumbs.db
 
 # Generated hash files (user data)
 hashes/
-*.json
 
 # Logs
 *.log
