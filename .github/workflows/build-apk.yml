@@ -27,11 +27,6 @@ jobs:
           eas-version: 15.0.12
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Initialize EAS Project
-        run: eas init --account disrepairticklishs-team --non-interactive
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-
       - name: Build APK
         run: eas build --platform android --profile preview --non-interactive
         env:
