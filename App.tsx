@@ -44,25 +44,46 @@ export default function App() {
   async function checkPermissions() {
     try {
       if (Platform.OS === 'android') {
-        const readPermission = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE
-        );
-        const writePermission = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE
-        );
-        
-        if (readPermission === PermissionsAndroid.RESULTS.GRANTED &&
-            writePermission === PermissionsAndroid.RESULTS.GRANTED) {
-          setPermissionsGranted(true);
+        // For Android 13+ (API 33+), use new granular permissions
+        if (Platform.Version >= 33) {
+          const permissions = [
+            'android.permission.READ_MEDIA_IMAGES',
+            'android.permission.READ_MEDIA_VIDEO',
+          ];
+          
+          const results = await PermissionsAndroid.requestMultiple(permissions);
+          const allGranted = Object.values(results).every(
+            r => r === PermissionsAndroid.RESULTS.GRANTED
+          );
+          
+          if (allGranted) {
+            setPermissionsGranted(true);
+          } else {
+            setError('Media permissions are required. Please enable them in Settings.');
+          }
         } else {
-          setError('Storage permissions are required');
+          // For Android 12 and below
+          const readPermission = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE
+          );
+          
+          if (readPermission === PermissionsAndroid.RESULTS.GRANTED) {
+            setPermissionsGranted(true);
+          } else {
+            setError('Storage permissions are required. Please enable them in Settings.');
+          }
         }
       } else {
+        // iOS
         const { status } = await MediaLibrary.requestPermissionsAsync();
-        setPermissionsGranted(status === 'granted');
+        if (status === 'granted') {
+          setPermissionsGranted(true);
+        } else {
+          setError('Photo library permissions are required');
+        }
       }
     } catch (err) {
-      setError('Failed to check permissions');
+      setError('Failed to check permissions: ' + String(err));
       console.error(err);
     }
   }
@@ -284,6 +305,11 @@ export default function App() {
         <TouchableOpacity style={styles.button} onPress={checkPermissions}>
           <Text style={styles.buttonText}>Grant Permissions</Text>
         </TouchableOpacity>
+        {error && (
+          <Text style={styles.helpText}>
+            If the button doesn't work, go to Settings → Apps → Stash Photos → Permissions and enable Photos/Videos
+          </Text>
+        )}
       </View>
     );
   }
@@ -424,6 +450,15 @@ const styles = StyleSheet.create({
     color: COLORS.danger,
     textAlign: 'center',
     marginVertical: 10,
+    paddingHorizontal: 20,
+  },
+  helpText: {
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginTop: 20,
+    paddingHorizontal: 30,
+    fontSize: 12,
+    lineHeight: 18,
   },
   headerTitle: {
     fontSize: 28,
